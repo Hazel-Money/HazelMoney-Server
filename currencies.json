@@ -1,0 +1,488 @@
+{
+    "usd": {
+        "code": "USD",
+        "name": "United States Dollar",
+        "rate": 1.0,
+        "inverseRate": 1.0
+    },
+    "eur": {
+        "code": "EUR",
+        "name": "Euro",
+        "rate": 0.91361321066856,
+        "inverseRate": 1.0945551009143
+    },
+    "gbp": {
+        "code": "GBP",
+        "name": "U.K. Pound Sterling",
+        "rate": 0.78553882500033,
+        "inverseRate": 1.2730115535659
+    },
+    "jpy": {
+        "code": "JPY",
+        "name": "Japanese Yen",
+        "rate": 143.95982959008,
+        "inverseRate": 0.006946382215424
+    },
+    "aud": {
+        "code": "AUD",
+        "name": "Australian Dollar",
+        "rate": 1.4917735759628,
+        "inverseRate": 0.67034301727365
+    },
+    "chf": {
+        "code": "CHF",
+        "name": "Swiss Franc",
+        "rate": 0.85071854267347,
+        "inverseRate": 1.1754769055079
+    },
+    "cad": {
+        "code": "CAD",
+        "name": "Canadian Dollar",
+        "rate": 1.3363593187521,
+        "inverseRate": 0.74830173739036
+    },
+    "nok": {
+        "code": "NOK",
+        "name": "Norwegian Krone",
+        "rate": 10.338003929277,
+        "inverseRate": 0.096730472037065
+    },
+    "qar": {
+        "code": "QAR",
+        "name": "Qatari Rial",
+        "rate": 3.6459975375428,
+        "inverseRate": 0.27427336132376
+    },
+    "czk": {
+        "code": "CZK",
+        "name": "Czech Koruna",
+        "rate": 22.478626863072,
+        "inverseRate": 0.044486703128775
+    },
+    "byn": {
+        "code": "BYN",
+        "name": "Belarussian Ruble",
+        "rate": 3.272151698376,
+        "inverseRate": 0.30560930304555
+    },
+    "ars": {
+        "code": "ARS",
+        "name": "Argentine Peso",
+        "rate": 814.72684085508,
+        "inverseRate": 0.0012274052478135
+    },
+    "ves": {
+        "code": "VES",
+        "name": "Venezuelan Bolivar",
+        "rate": 35.92623570869,
+        "inverseRate": 0.027834811531844
+    },
+    "bdt": {
+        "code": "BDT",
+        "name": "Bangladeshi taka",
+        "rate": 110.38185503353,
+        "inverseRate": 0.0090594599963575
+    },
+    "ron": {
+        "code": "RON",
+        "name": "Romanian New Leu",
+        "rate": 4.5444346156624,
+        "inverseRate": 0.22004937568108
+    },
+    "mdl": {
+        "code": "MDL",
+        "name": "Moldova Lei",
+        "rate": 17.655487750276,
+        "inverseRate": 0.056639613368051
+    },
+    "crc": {
+        "code": "CRC",
+        "name": "Costa Rican Colón",
+        "rate": 522.15900190114,
+        "inverseRate": 0.0019151254624723
+    },
+    "aed": {
+        "code": "AED",
+        "name": "U.A.E Dirham",
+        "rate": 3.6863150153773,
+        "inverseRate": 0.27127361493213
+    },
+    "idr": {
+        "code": "IDR",
+        "name": "Indonesian Rupiah",
+        "rate": 15546.20783243,
+        "inverseRate": 0.000064324368410537
+    },
+    "mxn": {
+        "code": "MXN",
+        "name": "Mexican Peso",
+        "rate": 16.888808465573,
+        "inverseRate": 0.059210808272144
+    },
+    "amd": {
+        "code": "AMD",
+        "name": "Armenia Dram",
+        "rate": 407.16758449526,
+        "inverseRate": 0.0024559911890816
+    },
+    "pyg": {
+        "code": "PYG",
+        "name": "Paraguayan Guaraní",
+        "rate": 7297.8723404251,
+        "inverseRate": 0.00013702623906706
+    },
+    "brl": {
+        "code": "BRL",
+        "name": "Brazilian Real",
+        "rate": 4.8895457737758,
+        "inverseRate": 0.20451797493406
+    },
+    "inr": {
+        "code": "INR",
+        "name": "Indian Rupee",
+        "rate": 83.115376618608,
+        "inverseRate": 0.012031468071049
+    },
+    "npr": {
+        "code": "NPR",
+        "name": "Nepalese Rupee",
+        "rate": 133.26754075124,
+        "inverseRate": 0.0075037026597994
+    },
+    "xaf": {
+        "code": "XAF",
+        "name": "Central African CFA Franc",
+        "rate": 596.4741145567,
+        "inverseRate": 0.0016765186880628
+    },
+    "kgs": {
+        "code": "KGS",
+        "name": "Kyrgyzstan Som",
+        "rate": 89.608748652071,
+        "inverseRate": 0.011159624646504
+    },
+    "dkk": {
+        "code": "DKK",
+        "name": "Danish Krone",
+        "rate": 6.8173110372823,
+        "inverseRate": 0.14668540052394
+    },
+    "lkr": {
+        "code": "LKR",
+        "name": "Sri Lanka Rupee",
+        "rate": 323.92850990526,
+        "inverseRate": 0.0030871009170896
+    },
+    "tnd": {
+        "code": "TND",
+        "name": "Tunisian Dinar",
+        "rate": 3.0868039388595,
+        "inverseRate": 0.32395967473382
+    },
+    "vnd": {
+        "code": "VND",
+        "name": "Vietnamese Dong",
+        "rate": 24381.283320751,
+        "inverseRate": 0.000041015068273658
+    },
+    "tmt": {
+        "code": "TMT",
+        "name": "New Turkmenistan Manat",
+        "rate": 3.5205706549269,
+        "inverseRate": 0.28404486034119
+    },
+    "pkr": {
+        "code": "PKR",
+        "name": "Pakistani Rupee",
+        "rate": 283.06114090574,
+        "inverseRate": 0.003532805657464
+    },
+    "bgn": {
+        "code": "BGN",
+        "name": "Bulgarian Lev",
+        "rate": 1.7877940456188,
+        "inverseRate": 0.55934854601995
+    },
+    "rub": {
+        "code": "RUB",
+        "name": "Russian Rouble",
+        "rate": 89.764170080941,
+        "inverseRate": 0.011140302406832
+    },
+    "gel": {
+        "code": "GEL",
+        "name": "Georgian lari",
+        "rate": 2.7032877661718,
+        "inverseRate": 0.36991992214581
+    },
+    "sar": {
+        "code": "SAR",
+        "name": "Saudi Riyal",
+        "rate": 3.7561539652066,
+        "inverseRate": 0.26622976833832
+    },
+    "pln": {
+        "code": "PLN",
+        "name": "Polish Zloty",
+        "rate": 3.9700122559121,
+        "inverseRate": 0.25188839115315
+    },
+    "kzt": {
+        "code": "KZT",
+        "name": "Kazakhstani Tenge",
+        "rate": 454.39232561458,
+        "inverseRate": 0.0022007413937889
+    },
+    "cop": {
+        "code": "COP",
+        "name": "Colombian Peso",
+        "rate": 3942.5287356321,
+        "inverseRate": 0.00025364431486881
+    },
+    "bhd": {
+        "code": "BHD",
+        "name": "Bahrain Dinar",
+        "rate": 0.376081,
+        "inverseRate": 2.65900165124
+    },
+    "egp": {
+        "code": "EGP",
+        "name": "Egyptian Pound",
+        "rate": 30.902462652194,
+        "inverseRate": 0.032359880545928
+    },
+    "krw": {
+        "code": "KRW",
+        "name": "South Korean Won",
+        "rate": 1317.2739915873,
+        "inverseRate": 0.00075914350878135
+    },
+    "dzd": {
+        "code": "DZD",
+        "name": "Algerian Dinar",
+        "rate": 134.80188250308,
+        "inverseRate": 0.0074182940284766
+    },
+    "pab": {
+        "code": "PAB",
+        "name": "Panamanian Balboa",
+        "rate": 1,
+        "inverseRate": 1
+    },
+    "hkd": {
+        "code": "HKD",
+        "name": "Hong Kong Dollar",
+        "rate": 7.8141264630297,
+        "inverseRate": 0.12797335757633
+    },
+    "mad": {
+        "code": "MAD",
+        "name": "Moroccan Dirham",
+        "rate": 9.9090927183708,
+        "inverseRate": 0.10091741276636
+    },
+    "zar": {
+        "code": "ZAR",
+        "name": "South African Rand",
+        "rate": 18.669482038366,
+        "inverseRate": 0.053563349960379
+    },
+    "iqd": {
+        "code": "IQD",
+        "name": "Iraqi dinar",
+        "rate": 1317.7048502189,
+        "inverseRate": 0.00075889528662953
+    },
+    "bob": {
+        "code": "BOB",
+        "name": "Bolivian Boliviano",
+        "rate": 6.8599999999998,
+        "inverseRate": 0.14577259475219
+    },
+    "kwd": {
+        "code": "KWD",
+        "name": "Kuwaiti Dinar",
+        "rate": 0.30738480047994,
+        "inverseRate": 3.2532512942691
+    },
+    "thb": {
+        "code": "THB",
+        "name": "Thai Baht",
+        "rate": 34.845854041329,
+        "inverseRate": 0.028697818650504
+    },
+    "twd": {
+        "code": "TWD",
+        "name": "New Taiwan Dollar ",
+        "rate": 30.983634121474,
+        "inverseRate": 0.032275103562075
+    },
+    "uzs": {
+        "code": "UZS",
+        "name": "Uzbekistan Sum",
+        "rate": 12461.385493073,
+        "inverseRate": 0.000080247898643042
+    },
+    "omr": {
+        "code": "OMR",
+        "name": "Omani Rial",
+        "rate": 0.38474979769178,
+        "inverseRate": 2.599091685036
+    },
+    "ils": {
+        "code": "ILS",
+        "name": "Israeli New Sheqel",
+        "rate": 3.7204964742199,
+        "inverseRate": 0.26878133252624
+    },
+    "pen": {
+        "code": "PEN",
+        "name": "Peruvian Nuevo Sol",
+        "rate": 3.7065173443684,
+        "inverseRate": 0.26979504129918
+    },
+    "tjs": {
+        "code": "TJS",
+        "name": "Tajikistan Ruble",
+        "rate": 11.019112136062,
+        "inverseRate": 0.090751413330964
+    },
+    "sek": {
+        "code": "SEK",
+        "name": "Swedish Krona",
+        "rate": 10.252206247835,
+        "inverseRate": 0.097539980744259
+    },
+    "sgd": {
+        "code": "SGD",
+        "name": "Singapore Dollar",
+        "rate": 1.3296983899883,
+        "inverseRate": 0.75205024502496
+    },
+    "huf": {
+        "code": "HUF",
+        "name": "Hungarian Forint",
+        "rate": 346.22451697289,
+        "inverseRate": 0.0028882992133059
+    },
+    "uah": {
+        "code": "UAH",
+        "name": "Ukrainian Hryvnia",
+        "rate": 38.238541097227,
+        "inverseRate": 0.026151625331556
+    },
+    "clp": {
+        "code": "CLP",
+        "name": "Chilean Peso",
+        "rate": 911.15288833056,
+        "inverseRate": 0.0010975106514037
+    },
+    "dop": {
+        "code": "DOP",
+        "name": "Dominican Peso",
+        "rate": 58.320142562266,
+        "inverseRate": 0.01714673449113
+    },
+    "cny": {
+        "code": "CNY",
+        "name": "Chinese Yuan",
+        "rate": 7.1635483851563,
+        "inverseRate": 0.13959562303957
+    },
+    "isk": {
+        "code": "ISK",
+        "name": "Icelandic Krona",
+        "rate": 137.58470235018,
+        "inverseRate": 0.0072682499065543
+    },
+    "azn": {
+        "code": "AZN",
+        "name": "Azerbaijan Manat",
+        "rate": 1.699000386689,
+        "inverseRate": 0.58858138458037
+    },
+    "htg": {
+        "code": "HTG",
+        "name": "Haitian gourde",
+        "rate": 131.74572690608,
+        "inverseRate": 0.0075903790087468
+    },
+    "ang": {
+        "code": "ANG",
+        "name": "Neth. Antillean Guilder",
+        "rate": 1.7900009995193,
+        "inverseRate": 0.55865890592717
+    },
+    "lbp": {
+        "code": "LBP",
+        "name": "Lebanese Pound",
+        "rate": 15052.262755626,
+        "inverseRate": 0.000066435194245213
+    },
+    "myr": {
+        "code": "MYR",
+        "name": "Malaysian Ringgit",
+        "rate": 4.6407440480589,
+        "inverseRate": 0.21548268761305
+    },
+    "irr": {
+        "code": "IRR",
+        "name": "Iranian rial",
+        "rate": 42246.77004012,
+        "inverseRate": 0.000023670448629572
+    },
+    "uyu": {
+        "code": "UYU",
+        "name": "Uruguayan Peso",
+        "rate": 39.339373781396,
+        "inverseRate": 0.025419825072887
+    },
+    "jod": {
+        "code": "JOD",
+        "name": "Jordanian Dinar",
+        "rate": 0.70916179920368,
+        "inverseRate": 1.4101154364532
+    },
+    "php": {
+        "code": "PHP",
+        "name": "Philippine Peso",
+        "rate": 55.97290168994,
+        "inverseRate": 0.017865788083303
+    },
+    "xof": {
+        "code": "XOF",
+        "name": "West African CFA Franc",
+        "rate": 596.4741145567,
+        "inverseRate": 0.0016765186880628
+    },
+    "lyd": {
+        "code": "LYD",
+        "name": "Libyan Dinar",
+        "rate": 4.7935017054575,
+        "inverseRate": 0.20861575971935
+    },
+    "nzd": {
+        "code": "NZD",
+        "name": "New Zealand Dollar",
+        "rate": 1.6008940977735,
+        "inverseRate": 0.62465093811688
+    },
+    "try": {
+        "code": "TRY",
+        "name": "Turkish Lira",
+        "rate": 29.925773366088,
+        "inverseRate": 0.033416011936159
+    },
+    "ngn": {
+        "code": "NGN",
+        "name": "Nigerian Naira",
+        "rate": 854.45399999998,
+        "inverseRate": 0.0011703380170261
+    },
+    "rsd": {
+        "code": "RSD",
+        "name": "Serbian Dinar",
+        "rate": 106.77877637602,
+        "inverseRate": 0.0093651569528996
+    }
+}
