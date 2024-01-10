@@ -15,9 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 $conn->close();
 
 function handleGetRequest($conn) {
+    global $users_table_name;
     if (isset($_GET['id'])) {
         $userId = $_GET['id'];
-        $stmt = $conn->prepare("SELECT * FROM user WHERE id = ?");
+        $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -30,7 +31,7 @@ function handleGetRequest($conn) {
         }
         $stmt->close();
     } else {
-        $result = $conn->query("SELECT * FROM user");
+        $result = $conn->query("SELECT * FROM $users_table_name");
         $users = [];
 
         while ($row = $result->fetch_assoc()) {
@@ -41,13 +42,14 @@ function handleGetRequest($conn) {
 }
 
 function handlePostRequest($conn) {
+    global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $email = $data['email'];
     $name = $data['username'];
     $password = password_hash($data['password'], PASSWORD_BCRYPT);
 
-    $stmt = $conn->prepare("INSERT INTO user (email, username, password_hash) VALUES (?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO $users_table_name (email, username, password_hash) VALUES (?, ?, ?)");
     $stmt->bind_param("sss", $email, $name, $password);
     $stmt->execute();
 
@@ -60,13 +62,14 @@ function handlePostRequest($conn) {
 }
 
 function handlePutRequest($conn) {
+    global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $user_id = $data['id'];
     $name = $data['username'];
     $email = $data['email'];
 
-    $stmt = $conn->prepare("SELECT * FROM user WHERE id = ?");
+    $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -75,10 +78,10 @@ function handlePutRequest($conn) {
         if (isset($data['password'])) {
             $password = password_hash($data['password'], PASSWORD_BCRYPT);
 
-            $stmt = $conn->prepare("UPDATE user SET username = ?, email = ?, password_hash = ? WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE $users_table_name SET username = ?, email = ?, password_hash = ? WHERE id = ?");
             $stmt->bind_param("sssi", $name, $email, $password, $user_id);
         } else {
-            $stmt = $conn->prepare("UPDATE user SET username = ?, email = ? WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE $users_table_name SET username = ?, email = ? WHERE id = ?");
             $stmt->bind_param("ssi", $name, $email, $user_id);
         }
 
@@ -96,28 +99,30 @@ function handlePutRequest($conn) {
 }
 
 function handleDeleteRequest($conn) {
+    global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $user_id = $data["id"];
-
-    $stmt = $conn->prepare("SELECT * FROM user WHERE id = ?");
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result !== false && $result->num_rows > 0) {
-        $user = $result->fetch_assoc();
-        if ($user["is_active"] === 0) {
-            sendJsonResponse(409, ["message" => "User already deleted"]);
-        } else {
-            $stmt = $conn->prepare("UPDATE user SET is_active = '0' WHERE id = ?");
-            $stmt->bind_param("i", $user_id);
-            $stmt->execute();
+    if (isset($data["id"])) {
+        $user_id = $data["id"];
+    
+        $stmt = $conn->prepare("DELETE FROM $users_table_name WHERE id = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+    
+        if ($stmt->affected_rows > 0) {
             sendJsonResponse(200, ["message" => "User deleted successfully"]);
+        } else {
+            sendJsonResponse(404, ["error" => "User not found"]);
         }
-        $stmt->close();
     } else {
-        sendJsonResponse(404, ["error" => "User not found"]);
+        $stmt = $conn->prepare("DELETE FROM $users_table_name");
+        $stmt->execute();
+    
+        if ($stmt->affected_rows > 0) {
+            sendJsonResponse(200, ["message" => "User deleted successfully"]);
+        } else {
+            sendJsonResponse(204, ["error" => "No users to be deleted"]);
+        }
     }
 }
 

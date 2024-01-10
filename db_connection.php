@@ -7,6 +7,13 @@ $username = "root";
 $password = "";
 $database = "hazelmoneydb";
 
+// Nomes das tabelas da bd
+$users_table_name = 'users';
+$accounts_table_name = 'accounts';
+$regular_payments_table_name = 'regular_payments';
+$transactions_table_name = 'transactions';
+$categories_table_name = 'categories';
+
 $conn = new mysqli($host, $username, $password, $database);
 
 if ($conn->connect_error) {
