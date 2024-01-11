@@ -16,6 +16,8 @@ $conn->close();
 
 function handleGetRequest($conn) {
     global $transactions_table_name;
+    global $accounts_table_name;
+    global $users_table_name;
     if (isset($_GET['id'])) {
         $accountId = $_GET['id'];
         $stmt = $conn->prepare("SELECT * FROM $transactions_table_name WHERE id = ?");
@@ -24,31 +26,64 @@ function handleGetRequest($conn) {
         $result = $stmt->get_result();
 
         if ($result !== false && $result->num_rows > 0) {
-            $account = $result->fetch_assoc();
-            sendJsonResponse(200, $account);
-        } else {
-            sendJsonResponse(404, ['error' => 'Account not found']);
+            $transaction = $result->fetch_assoc();
+            sendJsonResponse(200, $transaction);
+            return;
         }
-        $stmt->close();
+        sendJsonResponse(404, ['error' => 'Transaction not found']);
+    } elseif (isset($_GET['account_id'])) {
+        $accountId = $_GET['account_id'];
+
+        $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE id = ?");
+        $stmt->bind_param("i", $accountId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(404, ["error"=> "Account not found"]);
+            return;
+        }
+
+        $stmt = $conn->prepare("SELECT * FROM $transactions_table_name WHERE account_id = ?");
+        $stmt->bind_param("i", $accountId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $transactions = [];
+
+        while ($row = $result->fetch_assoc()) {
+            $transactions[] = $row;
+        }
+        sendJsonResponse(200, $transactions);
     } elseif (isset($_GET['user_id'])) {
         $userId = $_GET['user_id'];
-        $stmt = $conn->prepare("SELECT * FROM $transactions_table_name WHERE user_id = ?");
+
+        $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();
-        $accounts = [];
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(404, ["error"=> "User not found"]);
+            return;
+        }
+
+        $stmt = $conn->prepare("SELECT $transactions_table_name.id, $transactions_table_name.amount FROM $transactions_table_name INNER JOIN $accounts_table_name ON 
+            $transactions_table_name.account_id = $accounts_table_name.id WHERE user_id = ? 
+            GROUP BY $transactions_table_name.id");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $transactions = [];
 
         while ($row = $result->fetch_assoc()) {
-            $accounts[] = $row;
+            $transactions[] = $row;
         }
-        sendJsonResponse(200, $accounts);
+        sendJsonResponse(200, $transactions);
     } else {
         $result = $conn->query("SELECT * FROM $transactions_table_name");
-        $accounts = [];
+        $transactions = [];
         while ($row = $result->fetch_assoc()) {
-            $accounts[] = $row;
+            $transactions[] = $row;
         }
-        sendJsonResponse(200, $accounts);
+        sendJsonResponse(200, $transactions);
     }
 }
 
