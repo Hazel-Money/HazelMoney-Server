@@ -15,9 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 $conn->close();
 
 function handleGetRequest($conn) {
+    global $accounts_table_name;
     if (isset($_GET['id'])) {
         $accountId = $_GET['id'];
-        $stmt = $conn->prepare("SELECT * FROM account WHERE id = ?");
+        $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE id = ?");
         $stmt->bind_param("i", $accountId);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -31,7 +32,7 @@ function handleGetRequest($conn) {
         $stmt->close();
     } elseif (isset($_GET['user_id'])) {
         $userId = $_GET['user_id'];
-        $stmt = $conn->prepare("SELECT * FROM account WHERE user_id = ?");
+        $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE user_id = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -42,9 +43,8 @@ function handleGetRequest($conn) {
         }
         sendJsonResponse(200, $accounts);
     } else {
-        $result = $conn->query("SELECT * FROM account");
+        $result = $conn->query("SELECT * FROM $accounts_table_name");
         $accounts = [];
-
         while ($row = $result->fetch_assoc()) {
             $accounts[] = $row;
         }
@@ -53,6 +53,7 @@ function handleGetRequest($conn) {
 }
 
 function handlePostRequest($conn) {
+    global $accounts_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $user_id = $data['user_id'];
@@ -60,7 +61,7 @@ function handlePostRequest($conn) {
     $currency = $data['currency'];
     $balance = $data['balance'];
 
-    $stmt = $conn->prepare("INSERT INTO account (user_id, name, currency, balance) VALUES (?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO $accounts_table_name (user_id, name, currency, balance) VALUES (?, ?, ?, ?)");
     $stmt->bind_param("ssss", $user_id, $name, $currency, $balance);
     $stmt->execute();
 
@@ -73,6 +74,7 @@ function handlePostRequest($conn) {
 }
 
 function handlePutRequest($conn) {
+    global $accounts_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $id = $data['id'];
@@ -80,13 +82,13 @@ function handlePutRequest($conn) {
     $currency = $data['currency'];
     $balance = $data['balance'];
 
-    $stmt = $conn->prepare("SELECT * FROM account WHERE id = ?");
+    $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result !== false && $result->num_rows > 0) {
-        $stmt = $conn->prepare("UPDATE account SET name = ?, currency = ?, balance = ? WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE $accounts_table_name SET name = ?, currency = ?, balance = ? WHERE id = ?");
         $stmt->bind_param("sssi", $name, $currency, $balance, $id);
         $stmt->execute();
 
@@ -102,24 +104,49 @@ function handlePutRequest($conn) {
 }
 
 function handleDeleteRequest($conn) {
+    global $accounts_table_name;
+    global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $id = $data["id"];
-    if (i)
-    $stmt = $conn->prepare("SELECT * FROM account WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result !== false && $result->num_rows > 0) {
-        $account = $result->fetch_assoc();
-        $stmt = $conn->prepare("DELETE FROM transaction WHERE account_id = ?");
+    if (isset($data['id'])) {
+        $id = $data['id'];
+    
+        $stmt = $conn->prepare("DELETE FROM $accounts_table_name WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
-        sendJsonResponse(200, ["message" => "User deleted successfully"]);
-        $stmt->close();
+    
+        if ($stmt->affected_rows > 0) {
+            sendJsonResponse(200, ["message" => "Account deleted successfully"]);
+        } else {
+            sendJsonResponse(404, ["error" => "Account not found"]);
+        }
+    } elseif (isset($data['user_id'])){
+        $user_id = $data['user_id'];
+        $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result !== false && $result->num_rows > 0) {
+            $stmt = $conn->prepare("DELETE FROM $accounts_table_name WHERE user_id = ?");
+            $stmt->bind_param("i", $user_id);
+            $stmt->execute();
+            if ($stmt->affected_rows > 0) {
+                sendJsonResponse(200, ["message" => "Accounts deleted successfully"]);
+            } else {
+                sendJsonResponse(200, ["message" => "User has no accounts"]);
+            }
+        } else {
+            sendJsonResponse(404, ["error" => "User doesn't exist"]);
+        }
     } else {
-        sendJsonResponse(404, ["error" => "User not found"]);
+        $stmt = $conn->prepare("DELETE FROM $accounts_table_name");
+        $stmt->execute();
+    
+        if ($stmt->affected_rows > 0) {
+            sendJsonResponse(200, ["message" => "Deleted all accounts"]);
+        } else {
+            sendJsonResponse(200, ["message" => "No accounts were found"]);
+        }
     }
 }
 

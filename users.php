@@ -119,9 +119,9 @@ function handleDeleteRequest($conn) {
         $stmt->execute();
     
         if ($stmt->affected_rows > 0) {
-            sendJsonResponse(200, ["message" => "User deleted successfully"]);
+            sendJsonResponse(200, ["message" => "Deleted all users"]);
         } else {
-            sendJsonResponse(204, ["error" => "No users to be deleted"]);
+            sendJsonResponse(200, ["message" => "No users were found"]);
         }
     }
 }

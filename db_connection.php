@@ -13,6 +13,7 @@ $accounts_table_name = 'accounts';
 $regular_payments_table_name = 'regular_payments';
 $transactions_table_name = 'transactions';
 $categories_table_name = 'categories';
+$currencies_table_name = 'currencies';
 
 $conn = new mysqli($host, $username, $password, $database);
 
