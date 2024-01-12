@@ -11,6 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handlePutRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     handleDeleteRequest($conn);
+} else {
+    sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
 $conn->close();
 
@@ -106,7 +108,7 @@ function handlePutRequest($conn) {
 
 function handleDeleteRequest($conn) {
     global $accounts_table_name;
-    global $users_table_name;
+    global $categories_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     if (isset($data['id'])) {
@@ -123,7 +125,7 @@ function handleDeleteRequest($conn) {
         }
     } elseif (isset($data['user_id'])){
         $user_id = $data['user_id'];
-        $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
+        $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $result = $stmt->get_result();
