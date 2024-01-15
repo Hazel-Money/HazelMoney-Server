@@ -22,9 +22,17 @@ function handleGetRequest($conn) {
     global $transactions_table_name;
     global $accounts_table_name;
     global $categories_table_name;
+    global $users_table_name;
     if (isset($_GET['id'])) {
         $id = $_GET['id'];
+        $t = $transactions_table_name;
+        $c = $categories_table_name;
         $stmt = $conn->prepare("SELECT * FROM $transactions_table_name WHERE id = ?");
+        $stmt = $conn->prepare(
+            "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
+            FROM $t INNER JOIN $c ON $t.category_id = $c.id
+            WHERE  $t.id = ?"
+        );
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -47,7 +55,14 @@ function handleGetRequest($conn) {
             return;
         }
 
-        $stmt = $conn->prepare("SELECT * FROM $transactions_table_name WHERE account_id = ?");
+        $t = $transactions_table_name;
+        $c = $categories_table_name;
+        $stmt = $conn->prepare(
+            "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
+            FROM $t INNER JOIN $c ON $t.category_id = $c.id
+            WHERE $t.account_id = ?
+            GROUP BY $t.id"
+        );
         $stmt->bind_param("i", $accountId);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -55,12 +70,13 @@ function handleGetRequest($conn) {
 
         while ($row = $result->fetch_assoc()) {
             $transactions[] = $row;
+            
         }
         sendJsonResponse(200, $transactions);
     } elseif (isset($_GET['user_id'])) {
         $userId = $_GET['user_id'];
 
-        $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE id = ?");
+        $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -70,10 +86,13 @@ function handleGetRequest($conn) {
         }
 
         $t = $transactions_table_name;
+        $a = $accounts_table_name;
+        $c = $categories_table_name;
         $stmt = $conn->prepare(
-            "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description 
-            FROM $t INNER JOIN $accounts_table_name ON 
-            $t.account_id = $accounts_table_name.id WHERE user_id = ? 
+            "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
+            FROM $a INNER JOIN 
+            ($t INNER JOIN $c ON $t.category_id = $c.id) ON $a.id = $t.account_id
+            WHERE accounts.user_id = ? 
             GROUP BY $t.id");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
@@ -86,6 +105,12 @@ function handleGetRequest($conn) {
         sendJsonResponse(200, $transactions);
     } else {
         $result = $conn->query("SELECT * FROM $transactions_table_name");
+        $t = $transactions_table_name;
+        $c = $categories_table_name;
+        $result = $conn->query(
+            "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
+            FROM $t INNER JOIN $c ON $t.category_id = $c.id GROUP BY $t.id"
+        );
         $transactions = [];
         while ($row = $result->fetch_assoc()) {
             $transactions[] = $row;
@@ -236,4 +261,3 @@ function sendJsonResponse($statusCode, $data) {
     http_response_code($statusCode);
     echo json_encode($data);
 }
-?>
