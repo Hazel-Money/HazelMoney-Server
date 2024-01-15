@@ -96,6 +96,7 @@ function handleGetRequest($conn) {
 
 function handlePostRequest($conn) {
     global $transactions_table_name;
+    global $accounts_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $accountId = $data["account_id"];
@@ -109,15 +110,29 @@ function handlePostRequest($conn) {
     }
 
     $stmt = $conn->prepare(
-        "INSERT INTO $transactions_table_name VALUES (NULL, ?, ?, ?, ?, ?, ?)");
+        "INSERT INTO $transactions_table_name 
+        VALUES (NULL, ?, ?, ?, ?, ?, ?)");
     $stmt->bind_param("ssssss", $accountId, $categoryId, $amount, $isIncome, $paymentDate, $description);
     $stmt->execute();
 
-    if ($stmt->affected_rows > 0) {
-        sendJsonResponse(201, ['message' => 'Transaction added successfully']);
-    } else {
+    if ($stmt->affected_rows === 0) {
         sendJsonResponse(400, ['error' => 'Query execution failed: ' . $conn->error]);
+        return;
     }
+
+    $operation = ($isIncome === 1) ? '+' : '-';
+    $stmt = $conn->prepare(
+        "UPDATE $accounts_table_name
+        SET balance = balance $operation ?
+        WHERE id = ?"
+    );
+    $stmt->bind_param('si', $amount, $accountId);
+    $stmt->execute();
+    if ($stmt->affected_rows === 0) {
+        sendJsonResponse(400, ['error'=> 'Query execution failed:' . $conn->error]);
+        return;
+    }
+    sendJsonResponse(201, ['message' => 'Transaction added successfully']);
     $stmt->close();
 }
 
