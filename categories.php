@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     handlePostRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
+    handleOptionsRequest($conn);
 } else {
     sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }

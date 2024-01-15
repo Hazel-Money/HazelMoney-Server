@@ -5,6 +5,8 @@ require_once 'db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    handleOptionsRequest($conn);
 } else {
     sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
@@ -35,6 +37,11 @@ function handleGetRequest($conn) {
         }
         sendJsonResponse(200, $frequency);
     }
+}
+
+function handleOptionsRequest($conn) {
+    header('Allow: OPTIONS, GET');
+    sendJsonResponse(204, []);
 }
 
 function sendJsonResponse($statusCode, $data) {

@@ -11,6 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handlePutRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     handleDeleteRequest($conn);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    handleOptionsRequest($conn);
 } else {
     sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
@@ -212,6 +214,11 @@ function handleDeleteRequest($conn) {
             sendJsonResponse(200, ["message" => "No transactions were found"]);
         }
     }
+}
+
+function handleOptionsRequest($conn) {
+    header('Allow: OPTIONS, GET, POST, PUT, DELETE');
+    sendJsonResponse(204, []);
 }
 
 function sendJsonResponse($statusCode, $data) {
