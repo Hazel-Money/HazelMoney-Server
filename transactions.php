@@ -1,6 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 require_once 'db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -57,20 +58,33 @@ function handleGetRequest($conn) {
 
         $t = $transactions_table_name;
         $c = $categories_table_name;
-        $stmt = $conn->prepare(
-            "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
-            FROM $t INNER JOIN $c ON $t.category_id = $c.id
-            WHERE $t.account_id = ?
-            GROUP BY $t.id"
-        );
-        $stmt->bind_param("i", $accountId);
+
+        if (isset($_GET['is_income'])) {
+            $stmt = $conn->prepare(
+                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
+                FROM $t INNER JOIN $c ON $t.category_id = $c.id
+                WHERE $t.account_id = ? AND $t.is_income = ?
+                GROUP BY $t.id
+                ORDER BY $t.payment_date DESC"
+            );
+            $stmt->bind_param("ii", $accountId, $_GET['is_income']);
+        } else {
+            $stmt = $conn->prepare(
+                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
+                FROM $t INNER JOIN $c ON $t.category_id = $c.id
+                WHERE $t.account_id = ?
+                GROUP BY $t.id
+                ORDER BY $t.payment_date DESC"
+            );
+            $stmt->bind_param("i", $accountId);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
+
         $transactions = [];
 
         while ($row = $result->fetch_assoc()) {
             $transactions[] = $row;
-            
         }
         sendJsonResponse(200, $transactions);
     } elseif (isset($_GET['user_id'])) {
@@ -88,13 +102,28 @@ function handleGetRequest($conn) {
         $t = $transactions_table_name;
         $a = $accounts_table_name;
         $c = $categories_table_name;
-        $stmt = $conn->prepare(
-            "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
-            FROM $a INNER JOIN 
-            ($t INNER JOIN $c ON $t.category_id = $c.id) ON $a.id = $t.account_id
-            WHERE accounts.user_id = ? 
-            GROUP BY $t.id");
-        $stmt->bind_param("i", $userId);
+        if (isset($_GET['is_income'])) {
+            $stmt = $conn->prepare(
+                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
+                FROM $a INNER JOIN 
+                ($t INNER JOIN $c ON $t.category_id = $c.id) ON $a.id = $t.account_id
+                WHERE $a.user_id = ? AND $t.is_income = ?
+                GROUP BY $t.id
+                ORDER BY $t.payment_date DESC"
+            );
+            $stmt->bind_param("ii", $userId, $_GET['is_income']);
+        }
+        else {
+            $stmt = $conn->prepare(
+                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
+                FROM $a INNER JOIN 
+                ($t INNER JOIN $c ON $t.category_id = $c.id) ON $a.id = $t.account_id
+                WHERE $a.user_id = ? 
+                GROUP BY $t.id
+                ORDER BY $t.payment_date DESC"
+            );
+            $stmt->bind_param("i", $userId);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
         $transactions = [];
@@ -107,10 +136,25 @@ function handleGetRequest($conn) {
         $result = $conn->query("SELECT * FROM $transactions_table_name");
         $t = $transactions_table_name;
         $c = $categories_table_name;
-        $result = $conn->query(
-            "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
-            FROM $t INNER JOIN $c ON $t.category_id = $c.id GROUP BY $t.id"
-        );
+        if (isset($_GET['is_income'])) {
+            $stmt = $conn->prepare(
+                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
+                FROM $t INNER JOIN $c ON $t.category_id = $c.id
+                WHERE $t.is_income = ?
+                GROUP BY $t.id
+                ORDER BY $t.payment_date DESC"
+                );
+            $stmt->bind_param("i", $_GET["is_income"]);
+            $stmt->execute();
+            $result = $stmt->get_result();
+        } else {
+            $result = $conn->query(
+                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
+                FROM $t INNER JOIN $c ON $t.category_id = $c.id
+                GROUP BY $t.id
+                ORDER BY $t.payment_date DESC"
+            );
+        }
         $transactions = [];
         while ($row = $result->fetch_assoc()) {
             $transactions[] = $row;

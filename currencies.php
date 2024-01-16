@@ -1,6 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
+header("Access-Control-Allow-Methods: GET, OPTIONS");
 require_once 'db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
