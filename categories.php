@@ -34,8 +34,8 @@ function handleGetRequest($conn) {
     } elseif (isset($_GET['user_id']) && isset($_GET['is_income'])){
         $userId = $_GET['user_id'];
         $isIncome = $_GET['is_income'];
-        $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE (user_id = ? OR user_id = 1) AND is_income = $isIncome");
-        $stmt->bind_param("i", $userId);
+        $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE (user_id = ? OR user_id = 1) AND is_income = ?");
+        $stmt->bind_param("ii", $userId, $isIncome);
         $stmt->execute();
         $result = $stmt->get_result();
         $categories = [];
