@@ -2,12 +2,11 @@
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+
 require_once 'db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    handlePostRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     handlePutRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
@@ -44,26 +43,6 @@ function handleGetRequest($conn) {
         }
         sendJsonResponse(200, $users);
     }
-}
-
-function handlePostRequest($conn) {
-    global $users_table_name;
-    $data = json_decode(file_get_contents("php://input"), true);
-
-    $email = $data['email'];
-    $name = $data['username'];
-    $password = password_hash($data['password'], PASSWORD_BCRYPT);
-
-    $stmt = $conn->prepare("INSERT INTO $users_table_name (email, username, password_hash) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $email, $name, $password);
-    $stmt->execute();
-
-    if ($stmt->affected_rows > 0) {
-        sendJsonResponse(201, ['message' => 'User added successfully']);
-    } else {
-        sendJsonResponse(400, ['error' => 'Query execution failed: ' . $conn->error]);
-    }
-    $stmt->close();
 }
 
 function handlePutRequest($conn) {
