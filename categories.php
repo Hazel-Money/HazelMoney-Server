@@ -2,6 +2,9 @@
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Max-Age: 3600");
+
 require_once 'db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
