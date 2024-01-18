@@ -6,8 +6,8 @@ header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
 require_once 'db_connection.php';
-
 require "vendor/autoload.php";
+$env = parse_ini_file('.env');
 use \Firebase\JWT\JWT;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $conn->close();
 
 function handlePostRequest($conn) {
+    global $env;
     global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
@@ -48,12 +49,11 @@ function handlePostRequest($conn) {
     $id = $user["id"];
     $username = $user["username"];
 
-    $secret_key = json_decode(file_get_contents("config/secret_key.json"), true)["secret_key"];
     $issuer_claim = "hazelmoneydb";
     $audience_claim = "localhost:80/api/";
     $issuedate_claim = time(); // issued at
     $notbefore_claim = $issuedate_claim; //not before in seconds
-    $expire_claim = $issuedate_claim + 60; // expire time in seconds
+    $expire_claim = $issuedate_claim + 30; // expire time in seconds
     $token = array(
         "iss" => $issuer_claim,
         "aud" => $audience_claim,
@@ -65,7 +65,7 @@ function handlePostRequest($conn) {
             "email" => $email,
             "username" => $username
         ));
-    $jwt = JWT::encode($token, $secret_key, 'HS256');
+    $jwt = JWT::encode($token, $env['secret'], 'HS256');
     sendJsonResponse(200, [
         "message" => "Successful login",
         "jwt" => $jwt,
