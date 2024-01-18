@@ -49,11 +49,11 @@ function handlePostRequest($conn) {
     $id = $user["id"];
     $username = $user["username"];
 
-    $issuer_claim = "hazelmoneydb";
-    $audience_claim = "localhost:80/api/";
+    $issuer_claim = "hazelmoney";
+    $audience_claim = "localhost/api/";
     $issuedate_claim = time(); // issued at
     $notbefore_claim = $issuedate_claim; //not before in seconds
-    $expire_claim = $issuedate_claim + 30; // expire time in seconds
+    $expire_claim = $issuedate_claim + 600; // expire time in seconds
     $token = array(
         "iss" => $issuer_claim,
         "aud" => $audience_claim,
@@ -65,7 +65,9 @@ function handlePostRequest($conn) {
             "email" => $email,
             "username" => $username
         ));
-    $jwt = JWT::encode($token, $env['secret'], 'HS256');
+    $key = $env['secret'];
+    $alg = $env['jwt_alg'];
+    $jwt = JWT::encode($token, $key, $alg);
     sendJsonResponse(200, [
         "message" => "Successful login",
         "jwt" => $jwt,

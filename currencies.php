@@ -9,9 +9,10 @@ require_once 'db_connection.php';
 require_once 'authorization.php';
 
 
-$authorization = authorizeUser();
-if ($authorization == 'Expired token') {
-    sendJsonResponse(401, ["error" => $authorization]);
+$authResponse = authorizeUser();
+$auth = json_decode($authResponse, true);
+if (isset($auth['error'])) {
+    sendJsonResponse(401, ["error" => $auth['error']]);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

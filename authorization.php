@@ -5,12 +5,6 @@ use \Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 $env = parse_ini_file(".env");
 
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
 function authorizeUser() {
     global $env;
     $authHeader = null;
@@ -21,17 +15,20 @@ function authorizeUser() {
     } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
         $authHeader = $_SERVER["REDIRECT_HTTP_AUTHORIZATION"];
     } else {
-        return false;
+        return json_encode(["error" => "JWT Authorization Required"]);
     }
     $authHeaderArray = explode(" ", $authHeader);
     if (isset($authHeaderArray[1])) {
         $jwt = $authHeaderArray[1];
+        $key = $env['secret'];
+        $alg = $env['jwt_alg'];
         try {
-            $alg = 'HS256';
-            $decoded = JWT::decode($jwt, new Key($env['secret'], 'HS256'));
-            return $decoded;
+            $decoded = JWT::decode($jwt, new Key($key, $alg));
+            return json_encode($decoded);
         } catch (Exception $e) {
-            return $e->getMessage();
+            return json_encode(["error" => $e->getMessage()]);
         }   
+    } else {
+        return json_encode(["error" => "JWT Authorization Required"]);
     }
 }
