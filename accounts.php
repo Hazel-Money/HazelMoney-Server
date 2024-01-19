@@ -66,11 +66,11 @@ function handlePostRequest($conn) {
 
     $user_id = $data['user_id'];
     $name = $data['name'];
-    $currency = $data['currency'];
+    $currency_id = $data['currency_id'];
     $balance = $data['balance'];
 
-    $stmt = $conn->prepare("INSERT INTO $accounts_table_name (user_id, name, currency, balance) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("ssss", $user_id, $name, $currency, $balance);
+    $stmt = $conn->prepare("INSERT INTO $accounts_table_name (user_id, name, currency_id, balance) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("ssss", $user_id, $name, $currency_id, $balance);
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
@@ -87,7 +87,7 @@ function handlePutRequest($conn) {
 
     $id = $data['id'];
     $name = $data['name'];
-    $currency = $data['currency'];
+    $currency_id = $data['currency_id'];
     $balance = $data['balance'];
 
     $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE id = ?");
@@ -100,8 +100,8 @@ function handlePutRequest($conn) {
         return;
     }
 
-    $stmt = $conn->prepare("UPDATE $accounts_table_name SET name = ?, currency = ?, balance = ? WHERE id = ?");
-    $stmt->bind_param("sssi", $name, $currency, $balance, $id);
+    $stmt = $conn->prepare("UPDATE $accounts_table_name SET name = ?, currency_id = ?, balance = ? WHERE id = ?");
+    $stmt->bind_param("sssi", $name, $currency_id, $balance, $id);
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
@@ -169,4 +169,3 @@ function sendJsonResponse($statusCode, $data) {
     http_response_code($statusCode);
     echo json_encode($data);
 }
-?>
