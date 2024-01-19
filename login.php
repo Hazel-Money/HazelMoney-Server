@@ -35,12 +35,12 @@ function handlePostRequest($conn) {
     $stmt->execute();
     $result = $stmt->get_result();
     $user = $result->fetch_assoc();
-    $password_hash = $user['password_hash'];
-
+    
     if (!$user) {
         sendJsonResponse(400, ["error"=> "Email or password does not match"]);
         return;
     }
+    $password_hash = $user['password_hash'];
     if (!password_verify($password, $password_hash)) {
         sendJsonResponse(400, ['error'=> "Email or password does not match"]);
         return;

@@ -8,7 +8,6 @@ header("Access-Control-Max-Age: 3600");
 require_once 'db_connection.php';
 require_once 'authorization.php';
 
-
 $authResponse = authorizeUser();
 $auth = json_decode($authResponse, true);
 if (isset($auth['error'])) {

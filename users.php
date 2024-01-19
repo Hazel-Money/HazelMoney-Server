@@ -1,22 +1,36 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
+$allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'];
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
 require_once 'db_connection.php';
+require_once 'authorization.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+$authResponse = authorizeUser();
+$auth = json_decode($authResponse, true);
+
+if (isset($auth['error'])) {
+    sendJsonResponse(401, ["error" => $auth['error']]);
+    return;
+}
+$user = $auth['data'];
+$isAdmin = $user['id'] == 1;
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAdmin) {
     handleGetRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-    handlePutRequest($conn);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    handlePutRequest($conn, $user['id']);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $isAdmin) {
     handleDeleteRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
-} else {
+} elseif (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
     sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
+} else {
+    sendJsonResponse(403, "You are not permitted to access this content!");
 }
 $conn->close();
 
@@ -47,13 +61,18 @@ function handleGetRequest($conn) {
     }
 }
 
-function handlePutRequest($conn) {
+function handlePutRequest($conn, $request_user_id) {
     global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $user_id = $data['id'];
     $name = $data['username'];
     $email = $data['email'];
+
+    if ($user_id != $request_user_id && $request_user_id != 1) {
+        sendJsonResponse(403, "You are not permitted to access this content");
+        return;
+    }
 
     $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
     $stmt->bind_param("i", $user_id);
