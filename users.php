@@ -12,16 +12,17 @@ require_once 'authorization.php';
 $authResponse = authorizeUser();
 $auth = json_decode($authResponse, true);
 
-if (isset($auth['error'])) {
-    sendJsonResponse(401, ["error" => $auth['error']]);
-    return;
+$user = null;
+$isAdmin = false;
+
+if (!isset($auth['error'])) {
+    $user = $auth['data'];
+    $isAdmin = $user['id'] == 1;
 }
-$user = $auth['data'];
-$isAdmin = $user['id'] == 1;
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAdmin) {
     handleGetRequest($conn);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+} elseif ($_SERVER['REQUEST_METHOD'] === 'PUT' && $user != null) {
     handlePutRequest($conn, $user['id']);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $isAdmin) {
     handleDeleteRequest($conn);
@@ -30,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAdmin) {
 } elseif (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
     sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 } else {
-    sendJsonResponse(403, "You are not permitted to access this content!");
+    sendJsonResponse(403, ["error" => "You are not permitted to access this content!"]);
 }
 $conn->close();
 
@@ -70,7 +71,7 @@ function handlePutRequest($conn, $request_user_id) {
     $email = $data['email'];
 
     if ($user_id != $request_user_id && $request_user_id != 1) {
-        sendJsonResponse(403, "You are not permitted to access this content");
+        sendJsonResponse(403, ["error" => "You are not permitted to access this content!"]);
         return;
     }
 

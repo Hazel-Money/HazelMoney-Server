@@ -6,13 +6,8 @@ header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
 require_once 'db_connection.php';
-require_once 'authorization.php';
 
-$authResponse = authorizeUser();
-$auth = json_decode($authResponse, true);
-if (isset($auth['error'])) {
-    sendJsonResponse(401, ["error" => $auth['error']]);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
