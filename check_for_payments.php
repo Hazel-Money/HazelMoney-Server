@@ -20,24 +20,22 @@ while ($rp_row = $regular_payments->fetch_assoc()) {
     $result = $conn->query("SELECT id, sql_interval FROM $frequencies_table_name WHERE id = $frequency_id");
     $row = $result->fetch_assoc();
     $frequency = $row['sql_interval'];
-    $time_division_factor = ($row['id'] == 3) ? 2 : 1;
-    //codigo fixe
-    $result = $conn->query("SELECT TIMESTAMPDIFF($frequency, '$last_payment_date', NOW()) AS timediff");
-    $row = $result->fetch_row();
-    $time_difference = $row[0];
 
-    if ($time_difference <= 0) {
+    $result = $conn->query("SELECT TIMESTAMPDIFF($frequency, '$last_payment_date', NOW())");
+    $row = $result->fetch_row();
+    $number_of_payments = $row[0];
+
+    if ($number_of_payments <= 0) {
         continue;
     }
 
     $conn->query(
         "UPDATE $regular_payments_table_name 
-        SET last_payment_date = DATE_ADD('$last_payment_date', INTERVAL $time_difference $frequency)
+        SET last_payment_date = DATE_ADD('$last_payment_date', INTERVAL $number_of_payments $frequency)
         WHERE id = $id"
     );
 
-    for ($i = 1; $i <= $time_difference; $i++) {
-        $interval = $i * $time_division_factor;
+    for ($i = 1; $i <= $number_of_payments; $i++) {
         $conn->query(
             "INSERT INTO $transactions_table_name
             VALUES (
@@ -46,7 +44,7 @@ while ($rp_row = $regular_payments->fetch_assoc()) {
             $category_id,
             $amount,
             $is_income,
-            DATE_ADD('$last_payment_date', INTERVAL $interval $frequency),
+            DATE_ADD('$last_payment_date', INTERVAL $i $frequency),
             '$description'
             )"
         );
