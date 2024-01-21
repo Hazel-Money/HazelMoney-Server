@@ -48,5 +48,11 @@ while ($rp_row = $regular_payments->fetch_assoc()) {
             '$description'
             )"
         );
+        $operation = ($is_income == 1) ? '+' : '-';
+        $conn->query(
+            "UPDATE $accounts_table_name
+            SET balance = balance $operation $amount
+            WHERE id = $account_id"
+        );
     }
 }
