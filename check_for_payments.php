@@ -1,4 +1,9 @@
 <?php
+/*
+código para verificar se existe algum pagamento regular para ser pago
+e realiza todas as transações necessárias, tal como atualização
+do saldo da conta
+*/
 require_once 'db_connection.php';
 
 global $regular_payments_table_name;

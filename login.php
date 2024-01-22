@@ -71,7 +71,9 @@ function handlePostRequest($conn) {
     sendJsonResponse(200, [
         "message" => "Successful login",
         "jwt" => $jwt,
+        "id" => $id,
         "email" => $email,
+        "username" => $username,
         "expireAt" => $expire_claim
     ]);
 }
