@@ -169,20 +169,20 @@ function handleGetRequest($conn) {
 function handlePostRequest($conn) {
     global $transactions_table_name;
     global $accounts_table_name;
+    global $categories_table_name;
+
     $data = json_decode(file_get_contents("php://input"), true);
 
     $accountId = $data["account_id"] ?? null;
     $categoryId = $data["category_id"] ?? null;
-    $amount = isset($data["amount"]) ? intval($data["amount"]) : null;
-    $isIncome = isset($data["is_income"]) ? intval($data["is_income"]) : null;
+    $amount = $data["amount"] ?? null;
+    $isIncome = $data["is_income"] ?? null;
     $paymentDate = $data["payment_date"] ?? null;
     $description = $data["description"] ?? null;
 
-    $allFieldsFilled = 
-        !is_null($accountId) && !is_null($categoryId) && !is_null($amount) && !is_null($isIncome) && !is_null($paymentDate) &&
-        !empty(trim($accountId)) && !empty(trim($categoryId)) && !empty(trim($amount)) && !empty(trim($isIncome)) && !empty(trim($paymentDate));
+    $hasEmptyData = hasEmptyData([$accountId, $categoryId, $amount, $isIncome, $paymentDate]);
 
-    if (!$allFieldsFilled) {
+    if ($hasEmptyData) {
         sendJsonResponse(400, ["message" => "All fields are required"]);
         return;
     }
@@ -190,22 +190,61 @@ function handlePostRequest($conn) {
         sendJsonResponse(400, ["message" => "Invalid amount"]);
         return;
     }
+    if (($isIncome != 0 && $isIncome != 1) || is_nan($isIncome)) {
+        sendJsonResponse(400, ["message" => "Invalid transaction type"]);
+        return;
+    }
     
     $date1 = new DateTime("now");
     $date2 = new DateTime($paymentDate);
-    $date_diff = date_diff($date1, $date2);
-    if ($date_diff->y < 0 || $date_diff->y > 1) {
-        sendJsonResponse(400, ["message"=> "Date invalid, too ancient, or from the future"]);
+    $date_diff = date_diff($date1, $date2, true);
+    if ($date1 > $date2 && $date_diff->y >= 1) {
+        sendJsonResponse(400, ["message"=> "Invalid date - date is too ancient"]);
+        return;
+    }
+    if ($date1 < $date2) {
+        sendJsonResponse(400, ["message"=> "Invalid date - date is in the future"]);
+        return;
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT * FROM $categories_table_name
+        WHERE id = ?"
+    );
+    $stmt->bind_param("i", $categoryId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows == 0) {
+        sendJsonResponse(400, ["message"=> "Invalid category"]);
+        return;
+    }
+    $category = $result->fetch_assoc();
+    if (intval($category['is_income']) != $isIncome) {
+        sendJsonResponse(400, ["message"=> "Category and transaction type conflict"]);
+        return;
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT * FROM $accounts_table_name
+        WHERE id = ?"
+    );
+    $stmt->bind_param("i", $accountId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows == 0) {
+        sendJsonResponse(400, ["message"=> "Invalid account"]);
         return;
     }
 
     $stmt = $conn->prepare(
         "INSERT INTO $transactions_table_name 
         VALUES (NULL, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssss", $accountId, $categoryId, $amount, $isIncome, $paymentDate, $description);
+    $stmt->bind_param("iiiiss", $accountId, $categoryId, $amount, $isIncome, $paymentDate, $description);
     $stmt->execute();
 
-    if ($stmt->affected_rows === 0) {
+    if ($stmt->affected_rows == 0) {
         sendJsonResponse(400, ["message" => $conn->error]);
         return;
     }
@@ -325,4 +364,13 @@ function sendJsonResponse($statusCode, $data) {
     header('Content-Type: application/json');
     http_response_code($statusCode);
     echo json_encode($data);
+}
+
+function hasEmptyData(array $data) {
+    foreach ($data as $element) {
+        if (is_null($element) || empty($element) && $element != 0) {
+            return true;
+        }
+    }
+    return false;
 }

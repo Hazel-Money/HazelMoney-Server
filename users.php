@@ -20,11 +20,11 @@ if (!isset($auth["message"])) {
     $isAdmin = $user['id'] == 1;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAdmin) {
-    handleGetRequest($conn);
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $user != null) {
+    handleGetRequest($conn, $user['id']);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT' && $user != null) {
     handlePutRequest($conn, $user['id']);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $isAdmin) {
+} elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $user != null) {
     handleDeleteRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
@@ -35,9 +35,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAdmin) {
 }
 $conn->close();
 
-function handleGetRequest($conn) {
+function handleGetRequest($conn, $user_id) {
     global $users_table_name;
     if (isset($_GET['id'])) {
+        if ($user_id != $_GET['id']) {
+            sendJsonResponse(403, ["message" => "You are not permitted to access this content!"]);
+            return;
+        }
         $userId = $_GET['id'];
         $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
         $stmt->bind_param("i", $userId);

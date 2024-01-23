@@ -20,9 +20,15 @@ function handlePostRequest($conn) {
     global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $email = $data['email'];
-    $name = $data['username'];
-    $password = password_hash($data['password'], PASSWORD_BCRYPT);
+    $email = $data['email'] ?? null;
+    $name = $data['username'] ?? null;
+    $password = isset($data['password']) ? password_hash($data['password'], PASSWORD_BCRYPT) : null;
+
+    $hasEmptyData = hasEmptyData([$email, $name, $password]);
+    if ($hasEmptyData) {
+        sendJsonResponse(400, ['message'=> 'All fields are required']);
+        return;
+    }
 
     $stmt = $conn->prepare("INSERT INTO $users_table_name (email, username, password_hash) VALUES (?, ?, ?)");
     $stmt->bind_param("sss", $email, $name, $password);
@@ -45,4 +51,13 @@ function sendJsonResponse($statusCode, $data) {
     header('Content-Type: application/json');
     http_response_code($statusCode);
     echo json_encode($data);
+}
+
+function hasEmptyData(array $data) {
+    foreach ($data as $element) {
+        if (is_null($element) || empty($element) && $element != 0) {
+            return true;
+        }
+    }
+    return false;
 }
