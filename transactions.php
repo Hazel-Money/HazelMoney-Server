@@ -178,13 +178,24 @@ function handlePostRequest($conn) {
     $paymentDate = $data["payment_date"] ?? null;
     $description = $data["description"] ?? null;
 
-    if (is_null($accountId) || is_null($categoryId) || is_null($amount) || is_null($isIncome) || is_null($paymentDate)) {
+    $allFieldsFilled = 
+        !is_null($accountId) && !is_null($categoryId) && !is_null($amount) && !is_null($isIncome) && !is_null($paymentDate) &&
+        !empty(trim($accountId)) && !empty(trim($categoryId)) && !empty(trim($amount)) && !empty(trim($isIncome)) && !empty(trim($paymentDate));
+
+    if (!$allFieldsFilled) {
         sendJsonResponse(400, ["message" => "All fields are required"]);
         return;
     }
-
     if ($amount <= 0 || is_nan($amount)) {
         sendJsonResponse(400, ["message" => "Invalid amount"]);
+        return;
+    }
+    
+    $date1 = new DateTime("now");
+    $date2 = new DateTime($paymentDate);
+    $date_diff = date_diff($date1, $date2);
+    if ($date_diff->y < 0 || $date_diff->y > 1) {
+        sendJsonResponse(400, ["message"=> "Date invalid, too ancient, or from the future"]);
         return;
     }
 
@@ -195,7 +206,7 @@ function handlePostRequest($conn) {
     $stmt->execute();
 
     if ($stmt->affected_rows === 0) {
-        sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
+        sendJsonResponse(400, ["message" => $conn->error]);
         return;
     }
 
