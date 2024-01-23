@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
 } else {
-    sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
+    sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
 $conn->close();
 
@@ -35,7 +35,7 @@ function handleGetRequest($conn) {
             $account = $result->fetch_assoc();
             sendJsonResponse(200, $account);
         } else {
-            sendJsonResponse(404, ['error' => 'Account not found']);
+            sendJsonResponse(404, ["message" => 'Account not found']);
         }
         $stmt->close();
     } elseif (isset($_GET['user_id'])) {
@@ -74,9 +74,9 @@ function handlePostRequest($conn) {
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
-        sendJsonResponse(201, ['message' => 'Account added successfully']);
+        sendJsonResponse(201, ["message" => 'Account added successfully']);
     } else {
-        sendJsonResponse(400, ['error' => 'Query execution failed: ' . $conn->error]);
+        sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
     }
     $stmt->close();
 }
@@ -96,7 +96,7 @@ function handlePutRequest($conn) {
     $result = $stmt->get_result();
 
     if ($result === false || $result->num_rows === 0) {
-        sendJsonResponse(404, ["error"=> "Account not found"]);
+        sendJsonResponse(404, ["message"=> "Account not found"]);
         return;
     }
 
@@ -105,9 +105,9 @@ function handlePutRequest($conn) {
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
-        sendJsonResponse(200, ['message' => 'Account updated successfully']);
+        sendJsonResponse(200, ["message" => 'Account updated successfully']);
     } else {
-        sendJsonResponse(400, ['error' => 'Query execution failed: ' . $conn->error]);
+        sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
     }
     $stmt->close();
 }
@@ -127,7 +127,7 @@ function handleDeleteRequest($conn) {
         if ($stmt->affected_rows > 0) {
             sendJsonResponse(200, ["message" => "Account deleted successfully"]);
         } else {
-            sendJsonResponse(404, ["error" => "Account not found"]);
+            sendJsonResponse(404, ["message" => "Account not found"]);
         }
     } elseif (isset($data['user_id'])){
         $user_id = $data['user_id'];
@@ -136,7 +136,7 @@ function handleDeleteRequest($conn) {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result === false || $result->num_rows === 0) {
-            sendJsonResponse(404, ["error"=> "User not found"]);
+            sendJsonResponse(404, ["message"=> "User not found"]);
             return;
         }
         $stmt = $conn->prepare("DELETE FROM $accounts_table_name WHERE user_id = ?");

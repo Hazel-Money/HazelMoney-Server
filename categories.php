@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
 } else {
-    sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
+    sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
 $conn->close();
 
@@ -31,7 +31,7 @@ function handleGetRequest($conn) {
             $category = $result->fetch_assoc();
             sendJsonResponse(200, $category);
         } else {
-            sendJsonResponse(404, ['error' => 'Category not found']);
+            sendJsonResponse(404, ["message" => 'Category not found']);
         }
         $stmt->close();
     } elseif (isset($_GET['user_id']) && isset($_GET['is_income'])){
@@ -86,7 +86,7 @@ function handlePostRequest($conn) {
     $result = $stmt->get_result();
 
     if ($result === false || $result->num_rows === 0) {
-        sendJsonResponse(404, ['error' => 'User not found']);
+        sendJsonResponse(404, ["message" => 'User not found']);
         return;
     }
 
@@ -98,9 +98,9 @@ function handlePostRequest($conn) {
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
-        sendJsonResponse(201, ['message' => 'User added successfully']);
+        sendJsonResponse(201, ["message" => 'User added successfully']);
     } else {
-        sendJsonResponse(400, ['error' => 'Query execution failed: ' . $conn->error]);
+        sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
     }
     $stmt->close();
 }

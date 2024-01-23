@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
 } else {
-    sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
+    sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
 $conn->close();
 
@@ -37,12 +37,12 @@ function handlePostRequest($conn) {
     $user = $result->fetch_assoc();
     
     if (!$user) {
-        sendJsonResponse(400, ["error"=> "Email or password does not match"]);
+        sendJsonResponse(400, ["message"=> "Email or password does not match"]);
         return;
     }
     $password_hash = $user['password_hash'];
     if (!password_verify($password, $password_hash)) {
-        sendJsonResponse(400, ['error'=> "Email or password does not match"]);
+        sendJsonResponse(400, ["message"=> "Email or password does not match"]);
         return;
     }
 
@@ -53,7 +53,7 @@ function handlePostRequest($conn) {
     $audience_claim = "localhost/api/";
     $issuedate_claim = time(); // issued at
     $notbefore_claim = $issuedate_claim; //not before in seconds
-    $expire_claim = $issuedate_claim + 600; // expire time in seconds
+    $expire_claim = $issuedate_claim + 60 * 60; // expire time in seconds
     $token = array(
         "iss" => $issuer_claim,
         "aud" => $audience_claim,

@@ -15,7 +15,7 @@ $auth = json_decode($authResponse, true);
 $user = null;
 $isAdmin = false;
 
-if (!isset($auth['error'])) {
+if (!isset($auth["message"])) {
     $user = $auth['data'];
     $isAdmin = $user['id'] == 1;
 }
@@ -29,9 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAdmin) {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
 } elseif (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
-    sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
+    sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 } else {
-    sendJsonResponse(403, ["error" => "You are not permitted to access this content!"]);
+    sendJsonResponse(403, ["message" => "You are not permitted to access this content!"]);
 }
 $conn->close();
 
@@ -48,7 +48,7 @@ function handleGetRequest($conn) {
             $user = $result->fetch_assoc();
             sendJsonResponse(200, $user);
         } else {
-            sendJsonResponse(404, ['error' => 'User not found']);
+            sendJsonResponse(404, ["message" => 'User not found']);
         }
         $stmt->close();
     } else {
@@ -71,7 +71,7 @@ function handlePutRequest($conn, $request_user_id) {
     $email = $data['email'];
 
     if ($user_id != $request_user_id && $request_user_id != 1) {
-        sendJsonResponse(403, ["error" => "You are not permitted to access this content!"]);
+        sendJsonResponse(403, ["message" => "You are not permitted to access this content!"]);
         return;
     }
 
@@ -94,13 +94,13 @@ function handlePutRequest($conn, $request_user_id) {
         $stmt->execute();
 
         if ($stmt->affected_rows > 0) {
-            sendJsonResponse(200, ['message' => 'User updated successfully']);
+            sendJsonResponse(200, ["message" => 'User updated successfully']);
         } else {
-            sendJsonResponse(400, ['error' => 'Query execution failed: ' . $conn->error]);
+            sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
         }
         $stmt->close();
     } else {
-        sendJsonResponse(404, ['error' => 'User not found']);
+        sendJsonResponse(404, ["message" => 'User not found']);
     }
 }
 
@@ -118,7 +118,7 @@ function handleDeleteRequest($conn) {
         if ($stmt->affected_rows > 0) {
             sendJsonResponse(200, ["message" => "User deleted successfully"]);
         } else {
-            sendJsonResponse(404, ["error" => "User not found"]);
+            sendJsonResponse(404, ["message" => "User not found"]);
         }
     } else {
         $stmt = $conn->prepare("DELETE FROM $users_table_name");

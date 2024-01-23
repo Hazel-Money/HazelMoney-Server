@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
 } else {
-    sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
+    sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
 $conn->close();
 
@@ -46,7 +46,7 @@ function handleGetRequest($conn) {
             sendJsonResponse(200, $transaction);
             return;
         }
-        sendJsonResponse(404, ['error' => 'Transaction not found']);
+        sendJsonResponse(404, ["message" => 'Transaction not found']);
     } elseif (isset($_GET['account_id'])) {
         $accountId = $_GET['account_id'];
 
@@ -55,7 +55,7 @@ function handleGetRequest($conn) {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result === false || $result->num_rows === 0) {
-            sendJsonResponse(404, ["error"=> "Account not found"]);
+            sendJsonResponse(404, ["message"=> "Account not found"]);
             return;
         }
 
@@ -98,7 +98,7 @@ function handleGetRequest($conn) {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result === false || $result->num_rows === 0) {
-            sendJsonResponse(404, ["error"=> "User not found"]);
+            sendJsonResponse(404, ["message"=> "User not found"]);
             return;
         }
 
@@ -171,14 +171,21 @@ function handlePostRequest($conn) {
     global $accounts_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $accountId = $data["account_id"];
-    $categoryId = $data["category_id"];
-    $amount = $data["amount"];
-    $isIncome = (int)$data["is_income"];
-    $paymentDate = $data["payment_date"];
-    $description = $data["description"];
-    if ($description == "") {
-        $description = null;
+    $accountId = $data["account_id"] ?? null;
+    $categoryId = $data["category_id"] ?? null;
+    $amount = isset($data["amount"]) ? intval($data["amount"]) : null;
+    $isIncome = isset($data["is_income"]) ? intval($data["is_income"]) : null;
+    $paymentDate = $data["payment_date"] ?? null;
+    $description = $data["description"] ?? null;
+
+    if (is_null($accountId) || is_null($categoryId) || is_null($amount) || is_null($isIncome) || is_null($paymentDate)) {
+        sendJsonResponse(400, ["message" => "All fields are required"]);
+        return;
+    }
+
+    if ($amount <= 0 || is_nan($amount)) {
+        sendJsonResponse(400, ["message" => "Invalid amount"]);
+        return;
     }
 
     $stmt = $conn->prepare(
@@ -188,11 +195,11 @@ function handlePostRequest($conn) {
     $stmt->execute();
 
     if ($stmt->affected_rows === 0) {
-        sendJsonResponse(400, ['error' => 'Query execution failed: ' . $conn->error]);
+        sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
         return;
     }
 
-    $operation = ($isIncome === 1) ? '+' : '-';
+    $operation = ($isIncome == 1) ? '+' : '-';
     $stmt = $conn->prepare(
         "UPDATE $accounts_table_name
         SET balance = balance $operation ?
@@ -201,10 +208,10 @@ function handlePostRequest($conn) {
     $stmt->bind_param('si', $amount, $accountId);
     $stmt->execute();
     if ($stmt->affected_rows === 0) {
-        sendJsonResponse(400, ['error'=> 'Query execution failed:' . $conn->error]);
+        sendJsonResponse(400, ["message"=> $conn->error]);
         return;
     }
-    sendJsonResponse(201, ['message' => 'Transaction added successfully']);
+    sendJsonResponse(201, ["message" => 'Transaction added successfully']);
     $stmt->close();
 }
 
@@ -229,7 +236,7 @@ function handlePutRequest($conn) {
     $result = $stmt->get_result();
 
     if ($result === false || $result->num_rows === 0) {
-        sendJsonResponse(404, ['error' => 'Transaction not found']);
+        sendJsonResponse(404, ["message" => 'Transaction not found']);
         return;
     }
 
@@ -241,9 +248,9 @@ function handlePutRequest($conn) {
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
-        sendJsonResponse(200, ['message' => 'Transaction updated successfully']);
+        sendJsonResponse(200, ["message" => 'Transaction updated successfully']);
     } else {
-        sendJsonResponse(400, ['error' => 'Query execution failed: ' . $conn->error]);
+        sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
     }
     $stmt->close();
 }
@@ -263,7 +270,7 @@ function handleDeleteRequest($conn) {
         if ($stmt->affected_rows > 0) {
             sendJsonResponse(200, ["message" => "Transaction deleted successfully"]);
         } else {
-            sendJsonResponse(404, ["error" => "Transaction not found"]);
+            sendJsonResponse(404, ["message" => "Transaction not found"]);
         }
     } elseif (isset($data['account_id'])) {
         $accountId = $data['account_id'];
@@ -273,7 +280,7 @@ function handleDeleteRequest($conn) {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result === false || $result->num_rows === 0) {
-            sendJsonResponse(404, ["error" => "Account not found"]);
+            sendJsonResponse(404, ["message" => "Account not found"]);
             return;
         }
 

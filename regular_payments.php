@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
 } else {
-    sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
+    sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
 $conn->close();
 
@@ -38,7 +38,7 @@ function handleGetRequest($conn) {
             sendJsonResponse(200, $regular_payment);
             return;
         }
-        sendJsonResponse(404, ['error' => 'Regular payment not found']);
+        sendJsonResponse(404, ["message" => 'Regular payment not found']);
     } elseif (isset($_GET['account_id'])) {
         $accountId = $_GET['account_id'];
 
@@ -47,7 +47,7 @@ function handleGetRequest($conn) {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result === false || $result->num_rows === 0) {
-            sendJsonResponse(404, ["error"=> "Account not found"]);
+            sendJsonResponse(404, ["message"=> "Account not found"]);
             return;
         }
 
@@ -69,7 +69,7 @@ function handleGetRequest($conn) {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result === false || $result->num_rows === 0) {
-            sendJsonResponse(404, ["error"=> "User not found"]);
+            sendJsonResponse(404, ["message"=> "User not found"]);
             return;
         }
 
@@ -119,9 +119,9 @@ function handlePostRequest($conn) {
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
-        sendJsonResponse(201, ['message' => 'Regular payment added successfully']);
+        sendJsonResponse(201, ["message" => 'Regular payment added successfully']);
     } else {
-        sendJsonResponse(400, ['error' => 'Query execution failed: ' . $conn->error]);
+        sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
     }
     $stmt->close();
 }
@@ -149,7 +149,7 @@ function handlePutRequest($conn) {
     $result = $stmt->get_result();
 
     if ($result === false || $result->num_rows === 0) {
-        sendJsonResponse(404, ['error' => 'Regular payment not found']);
+        sendJsonResponse(404, ["message" => 'Regular payment not found']);
         return;
     }
 
@@ -163,9 +163,9 @@ function handlePutRequest($conn) {
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
-        sendJsonResponse(200, ['message' => 'Regular payment updated successfully']);
+        sendJsonResponse(200, ["message" => 'Regular payment updated successfully']);
     } else {
-        sendJsonResponse(400, ['error' => 'Query execution failed: ' . $conn->error]);
+        sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
     }
     $stmt->close();
 }
@@ -185,7 +185,7 @@ function handleDeleteRequest($conn) {
         if ($stmt->affected_rows > 0) {
             sendJsonResponse(200, ["message" => "Regular payment deleted successfully"]);
         } else {
-            sendJsonResponse(404, ["error" => "Regular payment not found"]);
+            sendJsonResponse(404, ["message" => "Regular payment not found"]);
         }
     } elseif (isset($data['account_id'])) {
         $accountId = $data['account_id'];
@@ -195,7 +195,7 @@ function handleDeleteRequest($conn) {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result === false || $result->num_rows === 0) {
-            sendJsonResponse(404, ["error" => "Account not found"]);
+            sendJsonResponse(404, ["message" => "Account not found"]);
             return;
         }
 

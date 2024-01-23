@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
 } else {
-    sendJsonResponse(405, ["error" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
+    sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
 $conn->close();
 
@@ -29,7 +29,7 @@ function handleGetRequest($conn) {
             $currency = $result->fetch_assoc();
             sendJsonResponse(200, $currency);
         } else {
-            sendJsonResponse(404, ['error' => 'Currency not found']);
+            sendJsonResponse(404, ["message" => 'Currency not found']);
         }
         $stmt->close();
     } else {

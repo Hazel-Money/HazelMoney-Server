@@ -15,7 +15,7 @@ function authorizeUser() {
     } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
         $authHeader = $_SERVER["REDIRECT_HTTP_AUTHORIZATION"];
     } else {
-        return json_encode(["error" => "JWT Authorization Required"]);
+        return json_encode(["message" => "JWT Authorization Required"]);
     }
     $authHeaderArray = explode(" ", $authHeader);
     if (isset($authHeaderArray[1])) {
@@ -26,9 +26,9 @@ function authorizeUser() {
             $decoded = JWT::decode($jwt, new Key($key, $alg));
             return json_encode($decoded);
         } catch (Exception $e) {
-            return json_encode(["error" => $e->getMessage()]);
+            return json_encode(["message" => $e->getMessage()]);
         }   
     } else {
-        return json_encode(["error" => "JWT Authorization Required"]);
+        return json_encode(["message" => "JWT Authorization Required"]);
     }
 }
