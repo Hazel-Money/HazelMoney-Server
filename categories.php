@@ -74,11 +74,18 @@ function handlePostRequest($conn) {
     global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $userId = $data['user_id'];
-    $name = $data['name'];
-    $isIncome = $data['is_income'];
-    $icon = "icons/".$data['icon'];
-    $color = $data['color'];
+    $userId = isset($data['user_id']) ? intval($data['user_id']) : null;
+    $name = $data['name'] ?? null;
+    $isIncome = isset($data['is_income']) ? intval($data['is_income']) : null;
+    $icon = $data['icon'] ?? null;
+    $color = $data['color'] ?? null;
+
+    $hasEmptyData = hasEmptyData([$userId, $name, $isIncome, $icon, $color]);
+
+    if ($hasEmptyData) {
+        sendJsonResponse(400, ["message" => "All fields are required"]);
+        return;
+    }
 
     $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
     $stmt->bind_param("i", $userId);
@@ -94,11 +101,11 @@ function handlePostRequest($conn) {
         "INSERT INTO $categories_table_name
         VALUES (NULL, ?, ?, ?, ?, ?)"
     );
-    $stmt->bind_param("sssss", $userId, $name, $isIncome, $icon, $color);
+    $stmt->bind_param("isiss", $userId, $name, $isIncome, $icon, $color);
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
-        sendJsonResponse(201, ["message" => 'User added successfully']);
+        sendJsonResponse(201, ["message" => 'Category added successfully']);
     } else {
         sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
     }
@@ -115,4 +122,12 @@ function sendJsonResponse($statusCode, $data) {
     http_response_code($statusCode);
     echo json_encode($data);
 }
-?>
+
+function hasEmptyData(array $data) {
+    foreach ($data as $element) {
+        if (is_null($element) || empty($element) && $element != 0) {
+            return true;
+        }
+    }
+    return false;
+}
