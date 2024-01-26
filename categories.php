@@ -1,29 +1,46 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
+$allowedMethods = ['GET', 'POST', 'OPTIONS'];
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
 require_once 'db_connection.php';
+require_once 'authorization.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    handleGetRequest($conn);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    handlePostRequest($conn);
+$authResponse = authorizeUser();
+$auth = json_decode($authResponse, true);
+
+$user = null;
+$isAdmin = false;
+
+if (!isset($auth["message"])) {
+    $user = $auth['data'];
+    $isAdmin = $user['id'] == 1;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $user != null) {
+    handleGetRequest($conn, $user['id']);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $user != null) {
+    handlePostRequest($conn, $user['id']);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
-} else {
+} elseif (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
     sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
+} else {
+    sendJsonResponse(403, ["message" => "You are not permitted to access this content!"]);
 }
 $conn->close();
 
-function handleGetRequest($conn) {
+function handleGetRequest($conn, $user_id) {
     global $categories_table_name;
+    global $users_table_name;
     if (isset($_GET['id'])) {
         $id = $_GET['id'];
-        $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE id = ?");
-        $stmt->bind_param("i", $id);
+
+        $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE id = ? AND user_id = ?");
+        $stmt->bind_param("ii", $id, $user_id);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -35,10 +52,17 @@ function handleGetRequest($conn) {
         }
         $stmt->close();
     } elseif (isset($_GET['user_id']) && isset($_GET['is_income'])){
-        $userId = $_GET['user_id'];
-        $isIncome = $_GET['is_income'];
+        if ($user_id != $_GET['user_id']) {
+            sendJsonResponse(403, ['message'=> 'You are not allowed to access this content!!🤬']);
+            return;
+        }
+        $isIncome = intval($_GET['is_income']);
+        if ($isIncome != 0 && $isIncome != 1) {
+            sendJsonResponse(400, ['message'=> 'Invalid is_income type']);
+            return;
+        }
         $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE (user_id = ? OR user_id = 1) AND is_income = ?");
-        $stmt->bind_param("ii", $userId, $isIncome);
+        $stmt->bind_param("ii", $user_id, $isIncome);
         $stmt->execute();
         $result = $stmt->get_result();
         $categories = [];
@@ -48,9 +72,12 @@ function handleGetRequest($conn) {
         }
         sendJsonResponse(200, $categories);
     } else if (isset($_GET['user_id'])) {
-        $userId = $_GET['user_id'];
+        if ($user_id != $_GET['user_id']) {
+            sendJsonResponse(403, ['message'=> 'You are not allowed to access this content!!🤬']);
+            return;
+        }
         $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE user_id = ? OR user_id = 1");
-        $stmt->bind_param("i", $userId);
+        $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $result = $stmt->get_result();
         $categories = [];
@@ -60,6 +87,10 @@ function handleGetRequest($conn) {
         }
         sendJsonResponse(200, $categories);
     } else {
+        if ($user_id != 1) {
+            sendJsonResponse(403, ["message"=> "You are not allowed to access this content"]);
+            return;
+        }
         $result = $conn->query("SELECT * FROM $categories_table_name");
         $categories = [];
         while ($row = $result->fetch_assoc()) {
@@ -69,7 +100,7 @@ function handleGetRequest($conn) {
     }
 }
 
-function handlePostRequest($conn) {
+function handlePostRequest($conn, $user_id) {
     global $categories_table_name;
     global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
@@ -87,13 +118,18 @@ function handlePostRequest($conn) {
         return;
     }
 
+    if ($userId != $user_id) {
+        sendJsonResponse(403, ["message"=> "You are not permitted to access this content! 🥰"]);
+        return;
+    }
+
     $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result === false || $result->num_rows === 0) {
-        sendJsonResponse(404, ["message" => 'User not found']);
+        sendJsonResponse(400, ["message" => 'User is invalid']);
         return;
     }
 

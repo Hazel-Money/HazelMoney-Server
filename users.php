@@ -56,6 +56,10 @@ function handleGetRequest($conn, $user_id) {
         }
         $stmt->close();
     } else {
+        if ($user_id != 1) {
+            sendJsonResponse(403, ["message" => "You are not permitted to access this content!"]);
+            return;
+        }
         $result = $conn->query("SELECT * FROM $users_table_name");
         $users = [];
 
