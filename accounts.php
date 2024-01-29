@@ -89,14 +89,24 @@ function handleGetRequest($conn, $user_id) {
     }
 }
 
-function handlePostRequest($conn) {
+function handlePostRequest($conn, $request_user_id) {
     global $accounts_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $user_id = $data['user_id'];
-    $name = $data['name'];
-    $currency_id = $data['currency_id'];
-    $balance = $data['balance'];
+    $user_id = $data['user_id'] ?? null;
+    $name = $data['name'] ?? null;
+    $currency_id = $data['currency_id'] ?? null;
+    $balance = $data['balance'] ?? null;
+
+    $hasEmptyData = hasEmptyData([$user_id, $name, $currency_id, $balance]);
+    if ($hasEmptyData) {
+        sendJsonResponse(400, ["message" => "All fields are required"]);
+        return;
+    }
+
+    if ($user_id != $request_user_id) {
+        sendJsonResponse(403, ["message"=> "You are not allowed to create this account!"]);
+    }
 
     $stmt = $conn->prepare("INSERT INTO $accounts_table_name (user_id, name, currency_id, balance) VALUES (?, ?, ?, ?)");
     $stmt->bind_param("ssss", $user_id, $name, $currency_id, $balance);
@@ -197,4 +207,13 @@ function sendJsonResponse($statusCode, $data) {
     header('Content-Type: application/json');
     http_response_code($statusCode);
     echo json_encode($data);
+}
+
+function hasEmptyData(array $data) {
+    foreach ($data as $element) {
+        if (is_null($element) || empty($element) && $element != 0) {
+            return true;
+        }
+    }
+    return false;
 }
