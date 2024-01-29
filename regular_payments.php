@@ -100,19 +100,31 @@ function handleGetRequest($conn) {
 
 function handlePostRequest($conn) {
     global $regular_payments_table_name;
+    global $frequencies_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $accountId = $data["account_id"];
-    $categoryId = $data["category_id"];
-    $frequencyId = $data["frequency_id"];
-    $amount = $data["amount"];
-    $isIncome = (int)$data["is_income"];
-    $startDate = $data["start_date"];
-    $lastPaymentDate = $data["start_date"];
-    $description = $data["description"];
-    if ($description == "") {
-        $description = null;
+    $accountId = $data["account_id"] ?? null;
+    $categoryId = $data["category_id"] ?? null;
+    $frequencyId = $data["frequency_id"] ?? null;
+    $amount = $data["amount"] ?? null;
+    $isIncome = $data["is_income"] ?? null;
+    $startDate = $data["start_date"] ?? null;
+    $description = $data["description"] ?? null;
+
+    $hasEmptyData = hasEmptyData([$accountId, $categoryId, $frequencyId, $amount, $isIncome, $startDate]);
+    if ($hasEmptyData) {
+        sendJsonResponse(400, ["message" => "All fields are required"]);
+        return;
     }
+
+    $stmt = $conn->prepare("SELECT sql_interval FROM $frequencies_table_name WHERE id = ?");
+    $stmt->bind_param("i", $frequencyId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $frequency = $result->fetch_assoc()['sql_interval'];
+    
+    $result = $conn->query("SELECT DATE_ADD('$startDate', INTERVAL -1 $frequency) as last_payment_date");
+    $lastPaymentDate = $result->fetch_assoc()['last_payment_date'];
 
     $stmt = $conn->prepare("INSERT INTO $regular_payments_table_name VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->bind_param("ssssssss", $accountId, $categoryId, $frequencyId, $amount, $isIncome, $startDate, $lastPaymentDate, $description);
@@ -229,4 +241,13 @@ function sendJsonResponse($statusCode, $data) {
     header('Content-Type: application/json');
     http_response_code($statusCode);
     echo json_encode($data);
+}
+
+function hasEmptyData(array $data) {
+    foreach ($data as $element) {
+        if (is_null($element) || empty($element) && $element != 0) {
+            return true;
+        }
+    }
+    return false;
 }

@@ -8,32 +8,33 @@ header("Access-Control-Max-Age: 3600");
 
 require_once 'db_connection.php';
 require_once 'authorization.php';
+$env = parse_ini_file(".env");
 
 $authResponse = authorizeUser();
 $auth = json_decode($authResponse, true);
 
-$user = null;
-$isAdmin = false;
-
-if (!isset($auth["message"])) {
-    $user = $auth['data'];
-    $isAdmin = $user['id'] == 1;
+if (isset($auth['message'])) {
+    sendJsonResponse(401, $auth['message']);
+    return;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && $user != null) {
+$user = $auth['data'];
+$isAdmin = $user['id'] == $env['admin_id'];
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn, $user['id']);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $user != null) {
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     handlePostRequest($conn, $user['id']);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'PUT' && $user != null) {
+} elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     handlePutRequest($conn);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $user != null) {
+} elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     handleDeleteRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
 } elseif (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
     sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 } else {
-    sendJsonResponse(403, ["message" => "You are not permitted to access this content!"]);
+    sendJsonResponse(403, ["message" => "You are not allowed to access this content!"]);
 }
 $conn->close();
 
@@ -46,16 +47,16 @@ function handleGetRequest($conn, $user_id) {
         $stmt->execute();
         $result = $stmt->get_result();
 
-        if ($result !== false && $result->num_rows > 0) {
-            $account = $result->fetch_assoc();
-            if ($account['user_id'] != $user_id) {
-                sendJsonResponse(403, ['message'=> 'You are not permitted to access this account!']);
-                return;
-            }
-            sendJsonResponse(200, $account);
-        } else {
+        if ($result === false || $result->num_rows === 0) {
             sendJsonResponse(404, ["message" => 'Account not found']);
+            return;
         }
+        $account = $result->fetch_assoc();
+        if ($account['user_id'] != $user_id) {
+            sendJsonResponse(403, ['message'=> 'You are not permitted to access this account!']);
+            return;
+        }
+        sendJsonResponse(200, $account);
         $stmt->close();
     } elseif (isset($_GET['user_id'])) {
         if ($user_id != $_GET['user_id']) {
@@ -74,8 +75,10 @@ function handleGetRequest($conn, $user_id) {
         }
         sendJsonResponse(200, $accounts);
     } else {
-        if ($user_id != 1) {
+        global $isAdmin;
+        if (!$isAdmin) {
             sendJsonResponse(403, ["message"=> "You are not allowed to get all accounts!"]);
+            return;
         }
         $result = $conn->query("SELECT * FROM $accounts_table_name");
         $accounts = [];

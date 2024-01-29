@@ -12,24 +12,24 @@ require_once 'authorization.php';
 $authResponse = authorizeUser();
 $auth = json_decode($authResponse, true);
 
-$user = null;
-$isAdmin = false;
-
-if (!isset($auth["message"])) {
-    $user = $auth['data'];
-    $isAdmin = $user['id'] == 1;
+if (isset($auth['message'])) {
+    sendJsonResponse(401, $auth['message']);
+    return;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && $user != null) {
+$user = $auth['data'];
+$isAdmin = $user['id'] == 1;
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn, $user['id']);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $user != null) {
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     handlePostRequest($conn, $user['id']);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     handleOptionsRequest($conn);
 } elseif (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
     sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 } else {
-    sendJsonResponse(403, ["message" => "You are not permitted to access this content!"]);
+    sendJsonResponse(403, ["message" => "You are not allowed to access this content!"]);
 }
 $conn->close();
 

@@ -20,6 +20,7 @@ while ($rp_row = $regular_payments->fetch_assoc()) {
     $amount = $rp_row['amount'];
     $is_income = (int)$rp_row['is_income'];
     $last_payment_date = $rp_row['last_payment_date'];
+    echo $last_payment_date;
     $description = $rp_row['description'];
     
     $result = $conn->query("SELECT id, sql_interval FROM $frequencies_table_name WHERE id = $frequency_id");
