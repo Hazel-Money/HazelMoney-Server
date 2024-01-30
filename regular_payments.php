@@ -6,6 +6,20 @@ header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
 require_once 'db_connection.php';
+require_once 'authorization.php';
+$env = parse_ini_file(".env");
+
+$authResponse = authorizeUser();
+$auth = json_decode($authResponse, true);
+
+if (isset($auth['message'])) {
+    sendJsonResponse(401, $auth['message']);
+    return;
+}
+
+$user = $auth['data'];
+$isAdmin = $user['id'] == $env['admin_id'];
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn);
@@ -26,39 +40,106 @@ function handleGetRequest($conn) {
     global $regular_payments_table_name;
     global $accounts_table_name;
     global $categories_table_name;
+    global $frequencies_table_name;
+    global $users_table_name;
+    global $user;
     if (isset($_GET['id'])) {
         $id = $_GET['id'];
-        $stmt = $conn->prepare("SELECT * FROM $regular_payments_table_name WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $result = $stmt->get_result();
 
-        if ($result !== false && $result->num_rows > 0) {
-            $regular_payment = $result->fetch_assoc();
-            sendJsonResponse(200, $regular_payment);
-            return;
-        }
-        sendJsonResponse(404, ["message" => 'Regular payment not found']);
-    } elseif (isset($_GET['account_id'])) {
-        $accountId = $_GET['account_id'];
-
-        $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE id = ?");
-        $stmt->bind_param("i", $accountId);
+        $stmt = $conn->prepare(
+            "SELECT $regular_payments_table_name.id,
+            $regular_payments_table_name.account_id,
+            $regular_payments_table_name.category_id,
+            $regular_payments_table_name.frequency_id,
+            $regular_payments_table_name.amount,
+            $regular_payments_table_name.is_income,
+            $regular_payments_table_name.start_date,
+            $regular_payments_table_name.last_payment_date,
+            $regular_payments_table_name.description
+            FROM $regular_payments_table_name
+            INNER JOIN (
+                $accounts_table_name INNER JOIN $users_table_name
+                ON $accounts_table_name.user_id = $users_table_name.id
+            )
+            ON $regular_payments_table_name.account_id = $accounts_table_name.id
+            WHERE $users_table_name.id = ?
+            AND $regular_payments_table_name.id = ?"
+        );
+        $stmt->bind_param("ii", $user['id'], $id);
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result === false || $result->num_rows === 0) {
-            sendJsonResponse(404, ["message"=> "Account not found"]);
+            sendJsonResponse(404, ['message'=> 'Requested payment not found or doesn\'t belong to you']);
             return;
         }
+        $regular_payment = $result->fetch_assoc();
+        $frequency_result = $conn->query("SELECT id, sql_interval FROM $frequencies_table_name WHERE id = $regular_payment[frequency_id]");
+        $frequency_row = $frequency_result->fetch_assoc();
+        $frequency = $frequency_row['sql_interval'];
+        $last_payment_date = $regular_payment['last_payment_date'];
 
-        $stmt = $conn->prepare("SELECT * FROM $regular_payments_table_name WHERE account_id = ?");
-        $stmt->bind_param("i", $accountId);
+        $date_result = $conn->query("SELECT DATE_ADD('$last_payment_date', INTERVAL 1 $frequency) AS next_payment_date");
+        $date_row = $date_result->fetch_assoc();
+
+        $regular_payment['next_payment_date'] = $date_row['next_payment_date'];
+        sendJsonResponse(200, $regular_payment);
+    } elseif (isset($_GET['account_id'])) {
+        $accountId = $_GET['account_id'];
+
+        // $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE id = ?");
+        // $stmt->bind_param("i", $accountId);
+        // $stmt->execute();
+        // $result = $stmt->get_result();
+        // if ($result === false || $result->num_rows === 0) {
+        //     sendJsonResponse(404, ["message"=> "Account not found"]);
+        //     return;
+        // }
+
+        // $stmt = $conn->prepare("SELECT * FROM $regular_payments_table_name WHERE account_id = ?");
+        // $stmt->bind_param("i", $accountId);
+        // $stmt->execute();
+        // $result = $stmt->get_result();
+        
+        $stmt = $conn->prepare(
+            "SELECT $regular_payments_table_name.id,
+            $regular_payments_table_name.account_id,
+            $regular_payments_table_name.category_id,
+            $regular_payments_table_name.frequency_id,
+            $regular_payments_table_name.amount,
+            $regular_payments_table_name.is_income,
+            $regular_payments_table_name.start_date,
+            $regular_payments_table_name.last_payment_date,
+            $regular_payments_table_name.description
+            FROM $regular_payments_table_name
+            INNER JOIN (
+                $accounts_table_name INNER JOIN $users_table_name
+                ON $accounts_table_name.user_id = $users_table_name.id
+            )
+            ON $regular_payments_table_name.account_id = $accounts_table_name.id
+            WHERE $users_table_name.id = ?
+            AND $accounts_table_name.id = ?"
+        );
+        $stmt->bind_param("ii", $user['id'], $accountId);
         $stmt->execute();
         $result = $stmt->get_result();
         $regular_payments = [];
-
+        
         while ($row = $result->fetch_assoc()) {
+            $frequency_result = $conn->query("SELECT id, sql_interval FROM $frequencies_table_name WHERE id = $row[frequency_id]");
+            $frequency_row = $frequency_result->fetch_assoc();
+            $frequency = $frequency_row['sql_interval'];
+            $last_payment_date = $row['last_payment_date'];
+
+            $date_result = $conn->query("SELECT DATE_ADD('$last_payment_date', INTERVAL 1 $frequency) AS next_payment_date");
+            $date_row = $date_result->fetch_assoc();
+            $row['next_payment_date'] = $date_row['next_payment_date'];
+
             $regular_payments[] = $row;
+        }
+        
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(404, ['message' => 'Account not found or not authorized']);
+            return;
         }
         sendJsonResponse(200, $regular_payments);
     } elseif (isset($_GET['user_id'])) {
@@ -75,7 +156,7 @@ function handleGetRequest($conn) {
 
         $rp = $regular_payments_table_name;
         $stmt = $conn->prepare(
-            "SELECT $rp.id, $rp.account_id, $rp.category_id, $rp.amount, $rp.is_income, $rp.start_date, $rp.last_payment_date, $rp.description
+            "SELECT $rp.id, $rp.account_id, $rp.category_id, $rp.amount, $rp.is_income, $rp.frequency_id, $rp.start_date, $rp.last_payment_date, $rp.description
             FROM $rp INNER JOIN $accounts_table_name ON 
             $rp.account_id = $accounts_table_name.id WHERE user_id = ? 
             GROUP BY $rp.id");
@@ -85,6 +166,15 @@ function handleGetRequest($conn) {
         $regular_payments = [];
 
         while ($row = $result->fetch_assoc()) {
+            $frequency_result = $conn->query("SELECT id, sql_interval FROM $frequencies_table_name WHERE id = $row[frequency_id]");
+            $frequency_row = $frequency_result->fetch_assoc();
+            $frequency = $frequency_row['sql_interval'];
+            $last_payment_date = $row['last_payment_date'];
+
+            $date_result = $conn->query("SELECT DATE_ADD('$last_payment_date', INTERVAL 1 $frequency) AS next_payment_date");
+            $date_row = $date_result->fetch_assoc();
+            $row['next_payment_date'] = $date_row['next_payment_date'];
+
             $regular_payments[] = $row;
         }
         sendJsonResponse(200, $regular_payments);
@@ -92,6 +182,15 @@ function handleGetRequest($conn) {
         $result = $conn->query("SELECT * FROM $regular_payments_table_name");
         $regular_payments = [];
         while ($row = $result->fetch_assoc()) {
+            $frequency_result = $conn->query("SELECT id, sql_interval FROM $frequencies_table_name WHERE id = $row[frequency_id]");
+            $frequency_row = $frequency_result->fetch_assoc();
+            $frequency = $frequency_row['sql_interval'];
+            $last_payment_date = $row['last_payment_date'];
+
+            $date_result = $conn->query("SELECT DATE_ADD('$last_payment_date', INTERVAL 1 $frequency) AS next_payment_date");
+            $date_row = $date_result->fetch_assoc();
+            $row['next_payment_date'] = $date_row['next_payment_date'];
+
             $regular_payments[] = $row;
         }
         sendJsonResponse(200, $regular_payments);

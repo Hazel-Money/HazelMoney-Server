@@ -24,8 +24,13 @@ function handlePostRequest($conn) {
     global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $email = $data['email'];
-    $password = $data["password"];
+    $email = $data['email'] ?? null;
+    $password = $data["password"] ?? null;
+
+    if (hasEmptyData([$email, $password])) {
+        sendJsonResponse(400, ["message"=> "All fields are required"]);
+        return;
+    }
 
     $stmt = $conn->prepare(
         "SELECT * FROM $users_table_name
@@ -53,7 +58,7 @@ function handlePostRequest($conn) {
     $audience_claim = "localhost/api/";
     $issuedate_claim = time(); // issued at
     $notbefore_claim = $issuedate_claim; //not before in seconds
-    $expire_claim = $issuedate_claim + 60 * 60; // expire time in seconds
+    $expire_claim = $issuedate_claim + 3 * 60 * 60; // expire time in seconds
     $token = array(
         "iss" => $issuer_claim,
         "aud" => $audience_claim,
@@ -87,4 +92,13 @@ function sendJsonResponse($statusCode, $data) {
     header('Content-Type: application/json');
     http_response_code($statusCode);
     echo json_encode($data);
+}
+
+function hasEmptyData(array $data) {
+    foreach ($data as $element) {
+        if (is_null($element) || empty($element) && $element != 0) {
+            return true;
+        }
+    }
+    return false;
 }

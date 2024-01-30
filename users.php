@@ -22,9 +22,9 @@ $user = $auth['data'];
 $isAdmin = $user['id'] == $env['admin_id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    handleGetRequest($conn, $user['id']);
+    handleGetRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-    handlePutRequest($conn, $user['id']);
+    handlePutRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     handleDeleteRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -72,15 +72,17 @@ function handleGetRequest($conn, $user_id) {
     }
 }
 
-function handlePutRequest($conn, $request_user_id) {
+function handlePutRequest($conn) {
     global $users_table_name;
+    global $user;
+    global $isAdmin;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $user_id = $data['id'];
     $name = $data['username'];
     $email = $data['email'];
 
-    if ($user_id != $request_user_id && $request_user_id != 1) {
+    if ($user_id != $user['id'] && !$isAdmin) {
         sendJsonResponse(403, ["message" => "You are not permitted to access this content!"]);
         return;
     }
@@ -116,11 +118,16 @@ function handlePutRequest($conn, $request_user_id) {
 
 function handleDeleteRequest($conn) {
     global $users_table_name;
+    global $user;
+    global $isAdmin;
     $data = json_decode(file_get_contents("php://input"), true);
 
     if (isset($data["id"])) {
+        if ($user['id'] != $data['id'] && !$isAdmin) {
+            sendJsonResponse(403, ["message" => "You are not allowed to delete this user"]);
+            return;
+        }
         $user_id = $data["id"];
-    
         $stmt = $conn->prepare("DELETE FROM $users_table_name WHERE id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
@@ -131,6 +138,10 @@ function handleDeleteRequest($conn) {
             sendJsonResponse(404, ["message" => "User not found"]);
         }
     } else {
+        if ($isAdmin) {
+            sendJsonResponse(403, ["message"=> "You can't delete all users hahahaha 😜"]);
+            return;
+        }
         $stmt = $conn->prepare("DELETE FROM $users_table_name");
         $stmt->execute();
     
