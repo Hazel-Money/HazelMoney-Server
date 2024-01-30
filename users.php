@@ -156,8 +156,10 @@ function handleDeleteRequest($conn) {
 }
 
 function handleOptionsRequest() {
-    header('Allow: OPTIONS, GET, POST, PUT, DELETE');
-    sendJsonResponse(204, []);
+    header("Access-Control-Allow-Origin: *");
+    header('Access-Control-Allow-Methods: OPTIONS, GET, POST, PUT, DELETE');
+    header('Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With');
+    exit;
 }
 
 function sendJsonResponse($statusCode, $data) {

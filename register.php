@@ -45,8 +45,10 @@ function handlePostRequest($conn) {
 }
 
 function handleOptionsRequest() {
-    header('Allow: OPTIONS, POST');
-    sendJsonResponse(204, []);
+    header("Access-Control-Allow-Origin: *");
+    header('Access-Control-Allow-Methods: OPTIONS, POST');
+    header('Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With');
+    exit;
 }
 
 function sendJsonResponse($statusCode, $data) {

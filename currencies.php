@@ -46,8 +46,10 @@ function handleGetRequest($conn) {
 }
 
 function handleOptionsRequest() {
-    header('Allow: OPTIONS, GET');
-    sendJsonResponse(204, []);
+    header("Access-Control-Allow-Origin: *");
+    header('Access-Control-Allow-Methods: OPTIONS, GET');
+    header('Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With');
+    exit;
 }
 
 function sendJsonResponse($statusCode, $data) {
