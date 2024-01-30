@@ -5,6 +5,10 @@ header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    handleOptionsRequest();
+}
+
 require_once 'db_connection.php';
 require "vendor/autoload.php";
 $env = parse_ini_file('.env');
@@ -12,8 +16,6 @@ use \Firebase\JWT\JWT;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     handlePostRequest($conn);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    handleOptionsRequest($conn);
 } else {
     sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
@@ -83,7 +85,7 @@ function handlePostRequest($conn) {
     ]);
 }
 
-function handleOptionsRequest($conn) {
+function handleOptionsRequest() {
     header('Allow: OPTIONS, POST');
     sendJsonResponse(204, []);
 }

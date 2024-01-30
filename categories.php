@@ -6,6 +6,10 @@ header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    handleOptionsRequest();
+}
+
 require_once 'db_connection.php';
 require_once 'authorization.php';
 
@@ -24,8 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn, $user['id']);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     handlePostRequest($conn, $user['id']);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    handleOptionsRequest($conn);
 } elseif (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
     sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 } else {

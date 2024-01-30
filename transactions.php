@@ -5,6 +5,10 @@ header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    handleOptionsRequest();
+}
+
 require_once 'db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -15,8 +19,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handlePutRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     handleDeleteRequest($conn);
-} elseif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    handleOptionsRequest($conn);
 } else {
     sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 }
@@ -355,7 +357,7 @@ function handleDeleteRequest($conn) {
     }
 }
 
-function handleOptionsRequest($coon) {
+function handleOptionsRequest() {
     header('Allow: OPTIONS, GET, POST, PUT, DELETE');
     sendJsonResponse(204, []);
 }
