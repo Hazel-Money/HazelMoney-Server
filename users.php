@@ -56,14 +56,14 @@ function handleGetRequest($conn) {
         if ($result === false || $result->num_rows === 0) {
             sendJsonResponse(404, ["message" => 'User not found']);
         }
-        $user = $result->fetch_assoc();
+        $sql_user = $result->fetch_assoc();
 
         $result = $conn->query(
             "SELECT code
             FROM $currencies_table_name
-            WHERE id = $user[default_currency_id]"
+            WHERE id = $sql_user[default_currency_id]"
         );
-        $user['default_currency_code'] = $result->fetch_assoc()['code'];
+        $sql_user['default_currency_code'] = $result->fetch_assoc()['code'];
 
         $result = $conn->query(
             "SELECT ROUND(SUM(accounts.balance * currencies.inverse_rate * user_currencies.rate), 0)

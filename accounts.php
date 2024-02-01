@@ -93,14 +93,15 @@ function handleGetRequest($conn, $user_id) {
 
 function handlePostRequest($conn, $request_user_id) {
     global $accounts_table_name;
+    global $currencies_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $user_id = $data['user_id'] ?? null;
     $name = $data['name'] ?? null;
-    $currency_id = $data['currency_id'] ?? null;
+    $currency_code = $data['currency_code'] ?? null;
     $balance = $data['balance'] ?? null;
 
-    $hasEmptyData = hasEmptyData([$user_id, $name, $currency_id, $balance]);
+    $hasEmptyData = hasEmptyData([$user_id, $name, $currency_code, $balance]);
     if ($hasEmptyData) {
         sendJsonResponse(400, ["message" => "All fields are required"]);
         return;
@@ -110,7 +111,24 @@ function handlePostRequest($conn, $request_user_id) {
         sendJsonResponse(403, ["message"=> "You are not allowed to create this account!"]);
     }
 
-    $stmt = $conn->prepare("INSERT INTO $accounts_table_name (user_id, name, currency_id, balance) VALUES (?, ?, ?, ?)");
+    $stmt = $conn->prepare(
+        "SELECT id
+        FROM $currencies_table_name
+        WHERE code = ?"
+    );
+    $stmt->bind_param("s", $currency_code);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result === false || $result->num_rows === 0) {
+        sendJsonResponse(400, ["message"=> "Invalid currency code!"]);
+        return;
+    }
+    $currency_id = $result->fetch_assoc()["id"];
+    $stmt = $conn->prepare(
+        "INSERT INTO $accounts_table_name 
+        (user_id, name, currency_id, balance)
+        VALUES ( ?, ?, ?, ?)"
+    );
     $stmt->bind_param("ssss", $user_id, $name, $currency_id, $balance);
     $stmt->execute();
 
