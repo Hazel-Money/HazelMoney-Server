@@ -25,6 +25,7 @@ function handlePostRequest($conn) {
     $email = $data['email'] ?? null;
     $name = $data['username'] ?? null;
     $password = isset($data['password']) ? password_hash($data['password'], PASSWORD_BCRYPT) : null;
+    $default_currency_id = 1;
 
     $hasEmptyData = hasEmptyData([$email, $name, $password]);
     if ($hasEmptyData) {
@@ -32,8 +33,8 @@ function handlePostRequest($conn) {
         return;
     }
 
-    $stmt = $conn->prepare("INSERT INTO $users_table_name (email, username, password_hash) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $email, $name, $password);
+    $stmt = $conn->prepare("INSERT INTO $users_table_name (email, username, password_hash, default_currency_id) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("sssi", $email, $name, $password, $default_currency_id);
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {

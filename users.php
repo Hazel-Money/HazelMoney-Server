@@ -1,8 +1,8 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
-$allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'];
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+$allowedMethods = ['GET', 'PUT', 'DELETE', 'OPTIONS'];
+header("Access-Control-Allow-Methods: GET, PUT, DELETE, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
@@ -83,6 +83,7 @@ function handlePutRequest($conn) {
     $user_id = $data['id'];
     $name = $data['username'];
     $email = $data['email'];
+    $default_currency_id = $data['default_currency_id'];
 
     if ($user_id != $user['id'] && !$isAdmin) {
         sendJsonResponse(403, ["message" => "You are not permitted to access this content!"]);
@@ -98,11 +99,11 @@ function handlePutRequest($conn) {
         if (isset($data['password'])) {
             $password = password_hash($data['password'], PASSWORD_BCRYPT);
 
-            $stmt = $conn->prepare("UPDATE $users_table_name SET username = ?, email = ?, password_hash = ? WHERE id = ?");
-            $stmt->bind_param("sssi", $name, $email, $password, $user_id);
+            $stmt = $conn->prepare("UPDATE $users_table_name SET username = ?, email = ?, password_hash = ?, default_currency_id = ? WHERE id = ?");
+            $stmt->bind_param("sssii", $name, $email, $password, $default_currency_id, $user_id);
         } else {
-            $stmt = $conn->prepare("UPDATE $users_table_name SET username = ?, email = ? WHERE id = ?");
-            $stmt->bind_param("ssi", $name, $email, $user_id);
+            $stmt = $conn->prepare("UPDATE $users_table_name SET username = ?, email = ?, default_currency_id = ? WHERE id = ?");
+            $stmt->bind_param("ssii", $name, $email, $default_currency_id, $user_id);
         }
 
         $stmt->execute();
