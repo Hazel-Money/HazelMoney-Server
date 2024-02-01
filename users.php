@@ -66,7 +66,7 @@ function handleGetRequest($conn) {
         $user['default_currency_code'] = $result->fetch_assoc()['code'];
 
         $result = $conn->query(
-            "SELECT ROUND(SUM(accounts.balance * currencies.inverse_rate * user_currencies.rate), 2)
+            "SELECT ROUND(SUM(accounts.balance * currencies.inverse_rate * user_currencies.rate), 0)
             AS rounded_total_balance
             FROM users 
             JOIN accounts ON users.id = accounts.user_id
