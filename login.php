@@ -24,6 +24,7 @@ $conn->close();
 function handlePostRequest($conn) {
     global $env;
     global $users_table_name;
+    global $currencies_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $email = $data['email'] ?? null;
@@ -35,14 +36,15 @@ function handlePostRequest($conn) {
     }
 
     $stmt = $conn->prepare(
-        "SELECT * FROM $users_table_name
+        "SELECT * 
+        FROM $users_table_name
         WHERE email = ?"
     );
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $result = $stmt->get_result();
     $user = $result->fetch_assoc();
-    
+
     if (!$user) {
         sendJsonResponse(400, ["message"=> "Email or password does not match"]);
         return;
@@ -81,7 +83,7 @@ function handlePostRequest($conn) {
         "id" => $id,
         "email" => $email,
         "username" => $username,
-        "expireAt" => $expire_claim
+        "expireAt" => $expire_claim,
     ]);
 }
 

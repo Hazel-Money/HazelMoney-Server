@@ -10,6 +10,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once 'db_connection.php';
+require_once 'authorization.php';
+$env = parse_ini_file(".env");
+
+$authResponse = authorizeUser();
+$auth = json_decode($authResponse, true);
+
+if (isset($auth['message'])) {
+    sendJsonResponse(401, $auth['message']);
+    return;
+}
+
+$user = $auth['data'];
+$isAdmin = $user['id'] == $env['admin_id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn);
@@ -34,6 +47,26 @@ function handleGetRequest($conn) {
             sendJsonResponse(404, ["message" => 'Currency not found']);
         }
         $stmt->close();
+    } elseif (isset($_GET['user_id'])) {
+        global $user;
+        global $users_table_name;
+        if ($_GET['user_id'] != $user['id']) {
+            sendJsonResponse(403, ['message'=> 'You can\'t access another user\'s currency data']);
+            return;
+        }
+        $result = $conn->query(
+            "SELECT default_currency_id
+            FROM $users_table_name
+            WHERE id = $user[id]"
+        );
+        $default_currency = $result->fetch_assoc();
+        $result = $conn->query(
+            "SELECT code
+            FROM $currencies_table_name
+            WHERE id = $default_currency[default_currency_id]"
+        );
+        $default_currency_code = $result->fetch_assoc()['code'];
+        sendJsonResponse(200, $default_currency_code);
     } else {
         $result = $conn->query("SELECT id, code, name FROM $currencies_table_name");
         $currency = [];
