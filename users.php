@@ -38,25 +38,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 $conn->close();
 
-function handleGetRequest($conn, $user_id) {
+function handleGetRequest($conn) {
     global $users_table_name;
+    global $user;
+    global $currencies_table_name;
     if (isset($_GET['id'])) {
-        if ($user_id != $_GET['id']) {
+        if ($user['id'] != $_GET['id']) {
             sendJsonResponse(403, ["message" => "You are not permitted to access this content!"]);
             return;
         }
         $userId = $_GET['id'];
-        $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
+        $stmt = $conn->prepare("SELECT id, email, username, default_currency_id FROM $users_table_name WHERE id = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();
 
-        if ($result !== false && $result->num_rows > 0) {
-            $user = $result->fetch_assoc();
-            sendJsonResponse(200, $user);
-        } else {
+        if ($result === false || $result->num_rows === 0) {
             sendJsonResponse(404, ["message" => 'User not found']);
         }
+        $user = $result->fetch_assoc();
+
+        $result = $conn->query(
+            "SELECT code
+            FROM $currencies_table_name
+            WHERE id = $user[default_currency_id]"
+        );
+        $user['default_currency_code'] = $result->fetch_assoc()['code'];
+
+        $result = $conn->query(
+            "SELECT ROUND(SUM(accounts.balance * currencies.inverse_rate * user_currencies.rate), 2)
+            AS rounded_total_balance
+            FROM users 
+            JOIN accounts ON users.id = accounts.user_id
+            JOIN currencies ON accounts.currency_id = currencies.id
+            JOIN currencies AS user_currencies ON users.default_currency_id = user_currencies.id
+            WHERE users.id = $user[id]
+            GROUP BY users.id
+        ");
+        $user['balance'] = $result->fetch_assoc()['rounded_total_balance'];
+
+        
+        sendJsonResponse(200, $user);
         $stmt->close();
     } else {
         global $isAdmin;
