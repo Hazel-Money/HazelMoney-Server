@@ -188,17 +188,24 @@ function handlePostRequest($conn) {
         sendJsonResponse(400, ["message" => "All fields are required"]);
         return;
     }
-    if ($amount <= 0 || is_nan($amount)) {
+
+    if ($amount <= 0 || !is_numeric($amount)) {
         sendJsonResponse(400, ["message" => "Invalid amount"]);
         return;
     }
-    if (($isIncome != 0 && $isIncome != 1) || is_nan($isIncome)) {
+    if (($isIncome != 0 && $isIncome != 1) || !is_numeric($isIncome)) {
         sendJsonResponse(400, ["message" => "Invalid transaction type"]);
         return;
     }
     
     $date1 = new DateTime("now");
-    $date2 = new DateTime($paymentDate);
+    $format = 'Y-m-d H:i:s';
+    $date2 = DateTime::createFromFormat($format, $paymentDate);
+    if ($date2 === false || $date2->format($format) !== $paymentDate) {
+        sendJsonResponse(400, ["message" => "Invalid datetime format"]);
+        return;
+    }
+    
     $date_diff = date_diff($date1, $date2, true);
     if ($date1 > $date2 && $date_diff->y >= 1) {
         sendJsonResponse(400, ["message"=> "Invalid date - date is too ancient"]);
