@@ -55,14 +55,19 @@ function handleGetRequest($conn) {
     }
 
     $result = $conn->query(
-        "SELECT COALESCE(SUM($transactions_table_name.amount), 0) AS total_income
-        FROM $users_table_name
-        JOIN $accounts_table_name ON $users_table_name.id = $accounts_table_name.user_id
-        LEFT JOIN $transactions_table_name ON $accounts_table_name.id = $transactions_table_name.account_id AND $transactions_table_name.is_income = 1
-        WHERE $users_table_name.id = $user[id]
+        "SELECT users.id AS user_id,
+        users.username,
+        ROUND(SUM(transactions.amount * account_currencies.inverse_rate * user_currencies.rate * CASE WHEN transactions.is_income = 1 THEN 1 ELSE -1 END), 2) AS total_income
+        FROM users
+        JOIN accounts ON users.id = accounts.user_id
+        JOIN transactions ON accounts.id = transactions.account_id
+        JOIN currencies AS account_currencies ON accounts.currency_id = account_currencies.id
+        JOIN currencies AS user_currencies ON users.default_currency_id = user_currencies.id
+        WHERE users.id = $user[id]
+        AND transactions.is_income = 1
+        GROUP BY users.id;
     ");
     $total_income = $result->fetch_assoc()['total_income'];
-
     
     sendJsonResponse(200, ['total_income' => $total_income]);
     $stmt->close();

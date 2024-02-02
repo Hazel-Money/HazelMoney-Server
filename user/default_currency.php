@@ -36,9 +36,7 @@ $conn->close();
 
 function handleGetRequest($conn) {
     global $users_table_name;
-    global $transactions_table_name;
     global $currencies_table_name;
-    global $accounts_table_name;
     global $user;
     $userId = $user['id'];
     $stmt = $conn->prepare(
@@ -53,23 +51,19 @@ function handleGetRequest($conn) {
     if ($result === false || $result->num_rows === 0) {
         sendJsonResponse(404, ["message" => 'User not found']);
     }
+    $user = $result->fetch_assoc();
 
     $result = $conn->query(
-        "SELECT users.id AS user_id,
-        users.username,
-        ROUND(SUM(transactions.amount * account_currencies.inverse_rate * user_currencies.rate * CASE WHEN transactions.is_income = 1 THEN 1 ELSE -1 END), 2) AS total_expense
-        FROM users
-        JOIN accounts ON users.id = accounts.user_id
-        JOIN transactions ON accounts.id = transactions.account_id
-        JOIN currencies AS account_currencies ON accounts.currency_id = account_currencies.id
-        JOIN currencies AS user_currencies ON users.default_currency_id = user_currencies.id
-        WHERE users.id = $user[id]
-        AND transactions.is_income = 0
-        GROUP BY users.id;
+        "SELECT code
+        FROM $currencies_table_name c
+        INNER JOIN $users_table_name u
+        ON c.id = u.default_currency_id
+        WHERE u.id = $user[id]
     ");
-    $total_expense = $result->fetch_assoc()['total_expense'];
+    $currency = $result->fetch_assoc()['code'];
+
     
-    sendJsonResponse(200, ['total_expense' => $total_expense]);
+    sendJsonResponse(200, ['currency' => $currency]);
     $stmt->close();
 }
 
