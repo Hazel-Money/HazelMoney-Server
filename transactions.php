@@ -10,6 +10,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once 'db_connection.php';
+require_once 'authorization.php';
+$env = parse_ini_file(".env");
+
+$authResponse = authorizeUser();
+$auth = json_decode($authResponse, true);
+
+if (isset($auth['message'])) {
+    sendJsonResponse(401, $auth['message']);
+    return;
+}
+
+$user = $auth['data'];
+$isAdmin = $user['id'] == $env['admin_id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn);
@@ -25,34 +38,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 $conn->close();
 
 function handleGetRequest($conn) {
+    global $user;
     global $transactions_table_name;
     global $accounts_table_name;
     global $categories_table_name;
     global $users_table_name;
     if (isset($_GET['id'])) {
         $id = $_GET['id'];
-        $t = $transactions_table_name;
-        $c = $categories_table_name;
-        $stmt = $conn->prepare("SELECT * FROM $transactions_table_name WHERE id = ?");
         $stmt = $conn->prepare(
-            "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
-            FROM $t INNER JOIN $c ON $t.category_id = $c.id
-            WHERE  $t.id = ?"
+            "SELECT t.id
+            FROM $transactions_table_name t
+            WHERE  t.id = ?"
         );
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $result = $stmt->get_result();
-
-        if ($result !== false && $result->num_rows > 0) {
-            $transaction = $result->fetch_assoc();
-            sendJsonResponse(200, $transaction);
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(404, ["message" => 'Transaction not found']);
             return;
         }
-        sendJsonResponse(404, ["message" => 'Transaction not found']);
+
+        $stmt  = $conn->prepare(
+            "SELECT t.id, t.account_id, t.category_id, t.amount,
+            t.is_income, t.payment_date, t.description, c.icon
+            FROM $users_table_name u
+            JOIN $accounts_table_name a ON u.id = a.user_id
+            JOIN $transactions_table_name t ON a.id = t.account_id
+            JOIN $categories_table_name c ON t.category_id = c.id
+            WHERE u.id = ?
+            AND t.id = ?
+            GROUP BY t.id"
+        );
+        $stmt->bind_param("ii", $user['id'], $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(403, ['message'=> 'You are not allowed to access this transaction']);
+            return;
+        }
+        $transaction = $result->fetch_assoc();
+        sendJsonResponse(404, $transaction);
     } elseif (isset($_GET['account_id'])) {
         $accountId = $_GET['account_id'];
 
-        $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE id = ?");
+        $stmt = $conn->prepare(
+            "SELECT *
+            FROM $accounts_table_name a
+            WHERE a.id = ?"
+        );
         $stmt->bind_param("i", $accountId);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -60,26 +94,28 @@ function handleGetRequest($conn) {
             sendJsonResponse(404, ["message"=> "Account not found"]);
             return;
         }
-
-        $t = $transactions_table_name;
-        $c = $categories_table_name;
+        $account = $result->fetch_assoc();
+        if ($account['user_id'] != $user['id']) {
+            sendJsonResponse(403, ['message'=> 'You are not allowed to access this account\'s data']);
+            return;
+        }
 
         if (isset($_GET['is_income'])) {
             $stmt = $conn->prepare(
-                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
-                FROM $t INNER JOIN $c ON $t.category_id = $c.id
-                WHERE $t.account_id = ? AND $t.is_income = ?
-                GROUP BY $t.id
-                ORDER BY $t.payment_date DESC"
+                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
+                FROM $transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id
+                WHERE t.account_id = ? AND t.is_income = ?
+                GROUP BY t.id
+                ORDER BY t.payment_date DESC"
             );
             $stmt->bind_param("ii", $accountId, $_GET['is_income']);
         } else {
             $stmt = $conn->prepare(
-                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
-                FROM $t INNER JOIN $c ON $t.category_id = $c.id
-                WHERE $t.account_id = ?
-                GROUP BY $t.id
-                ORDER BY $t.payment_date DESC"
+                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
+                FROM $transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id
+                WHERE t.account_id = ?
+                GROUP BY t.id
+                ORDER BY t.payment_date DESC"
             );
             $stmt->bind_param("i", $accountId);
         }
@@ -95,6 +131,10 @@ function handleGetRequest($conn) {
     } elseif (isset($_GET['user_id'])) {
         $userId = $_GET['user_id'];
 
+        if ($userId != $user['id']) {
+            sendJsonResponse(403, ['message'=> 'You are not allowed to access this user\'s data 🤬🤬🤬👺']);
+            return;
+        }
         $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
@@ -104,28 +144,25 @@ function handleGetRequest($conn) {
             return;
         }
 
-        $t = $transactions_table_name;
-        $a = $accounts_table_name;
-        $c = $categories_table_name;
         if (isset($_GET['is_income'])) {
             $stmt = $conn->prepare(
-                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
-                FROM $a INNER JOIN 
-                ($t INNER JOIN $c ON $t.category_id = $c.id) ON $a.id = $t.account_id
-                WHERE $a.user_id = ? AND $t.is_income = ?
-                GROUP BY $t.id
-                ORDER BY $t.payment_date DESC"
+                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
+                FROM $accounts_table_name a INNER JOIN 
+                ($transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id) ON a.id = t.account_id
+                WHERE a.user_id = ? AND t.is_income = ?
+                GROUP BY t.id
+                ORDER BY t.payment_date DESC"
             );
             $stmt->bind_param("ii", $userId, $_GET['is_income']);
         }
         else {
             $stmt = $conn->prepare(
-                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
-                FROM $a INNER JOIN 
-                ($t INNER JOIN $c ON $t.category_id = $c.id) ON $a.id = $t.account_id
-                WHERE $a.user_id = ? 
-                GROUP BY $t.id
-                ORDER BY $t.payment_date DESC"
+                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
+                FROM $accounts_table_name a INNER JOIN 
+                ($transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id) ON a.id = t.account_id
+                WHERE a.user_id = ? 
+                GROUP BY t.id
+                ORDER BY t.payment_date DESC"
             );
             $stmt->bind_param("i", $userId);
         }
@@ -138,26 +175,29 @@ function handleGetRequest($conn) {
         }
         sendJsonResponse(200, $transactions);
     } else {
+        global $isAdmin;
+        if (!$isAdmin) {
+            sendJsonResponse(403, ["message"=> "You are not allowed to access all transactions"]);
+            return;
+        }
         $result = $conn->query("SELECT * FROM $transactions_table_name");
-        $t = $transactions_table_name;
-        $c = $categories_table_name;
         if (isset($_GET['is_income'])) {
             $stmt = $conn->prepare(
-                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
-                FROM $t INNER JOIN $c ON $t.category_id = $c.id
-                WHERE $t.is_income = ?
-                GROUP BY $t.id
-                ORDER BY $t.payment_date DESC"
+                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
+                FROM $transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id
+                WHERE t.is_income = ?
+                GROUP BY t.id
+                ORDER BY t.payment_date DESC"
                 );
             $stmt->bind_param("i", $_GET["is_income"]);
             $stmt->execute();
             $result = $stmt->get_result();
         } else {
             $result = $conn->query(
-                "SELECT $t.id, $t.account_id, $t.category_id, $t.amount, $t.is_income, $t.payment_date, $t.description, $c.icon
-                FROM $t INNER JOIN $c ON $t.category_id = $c.id
-                GROUP BY $t.id
-                ORDER BY $t.payment_date DESC"
+                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
+                FROM $transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id
+                GROUP BY t.id
+                ORDER BY t.payment_date DESC"
             );
         }
         $transactions = [];
@@ -172,6 +212,7 @@ function handlePostRequest($conn) {
     global $transactions_table_name;
     global $accounts_table_name;
     global $categories_table_name;
+    global $user;
 
     $data = json_decode(file_get_contents("php://input"), true);
 
@@ -197,12 +238,12 @@ function handlePostRequest($conn) {
         sendJsonResponse(400, ["message" => "Invalid transaction type"]);
         return;
     }
-    
+
     $date1 = new DateTime("now");
     $format = 'Y-m-d H:i:s';
     $date2 = DateTime::createFromFormat($format, $paymentDate);
     if ($date2 === false || $date2->format($format) !== $paymentDate) {
-        sendJsonResponse(400, ["message" => "Invalid datetime format"]);
+        sendJsonResponse(400, ["message" => "Invalid date format"]);
         return;
     }
     
@@ -243,7 +284,21 @@ function handlePostRequest($conn) {
     $result = $stmt->get_result();
 
     if ($result->num_rows == 0) {
-        sendJsonResponse(400, ["message"=> "Invalid account"]);
+        sendJsonResponse(400, ["message"=> "Account not found"]);
+        return;
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT * FROM $accounts_table_name
+        WHERE id = ?
+        AND user_id = ?"
+    );
+    $stmt->bind_param("ii", $accountId, $user['id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result === false || $result->num_rows === 0) {
+        sendJsonResponse(403, ['message'=> 'Provided account does not belong to you']);
         return;
     }
 
@@ -276,34 +331,85 @@ function handlePostRequest($conn) {
 
 function handlePutRequest($conn) {
     global $transactions_table_name;
+    global $accounts_table_name;
+    global $categories_table_name;
+    global $user;
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $id = $data["id"];
-    $accountId = $data["account_id"];
-    $categoryId = $data["category_id"];
-    $amount = $data["amount"];
-    $isIncome = (int)$data["is_income"];
-    $paymentDate = $data["payment_date"];
-    $description = $data["description"];
-    if ($description == "") {
-        $description = null;
+    $id = $data["id"] ?? null;
+    $categoryId = $data["category_id"] ?? null;
+    $amount = $data["amount"] ?? null;
+    $paymentDate = $data["payment_date"] ?? null;
+    $description = $data["description"] ?? null;
+
+    $hasEmptyData = hasEmptyData([$id, $categoryId, $amount, $paymentDate]);
+
+    if ($hasEmptyData) {
+        sendJsonResponse(400, ["message"=> "All fields are required"]);
+        return;
     }
 
     $stmt = $conn->prepare("SELECT * FROM $transactions_table_name WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
-
     if ($result === false || $result->num_rows === 0) {
         sendJsonResponse(404, ["message" => 'Transaction not found']);
         return;
     }
 
     $stmt = $conn->prepare(
+        "SELECT a.user_id FROM
+        $accounts_table_name a
+        JOIN $transactions_table_name t
+        ON a.id = t.account_id
+        WHERE a.user_id = ?
+        AND t.id = ?"
+    );
+    $stmt->bind_param("ii", $user['id'], $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result === false || $result->num_rows === 0) {
+        sendJsonResponse(403, ["message" => "You are not permitted to access this transaction"]);
+        return;
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT * FROM $categories_table_name
+        WHERE id = ?"
+    );
+    $stmt->bind_param("i", $categoryId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows == 0) {
+        sendJsonResponse(400, ["message"=> "Invalid category"]);
+        return;
+    }
+
+    $date1 = new DateTime("now");
+    $format = 'Y-m-d H:i:s';
+    $date2 = DateTime::createFromFormat($format, $paymentDate);
+    if ($date2 === false || $date2->format($format) !== $paymentDate) {
+        sendJsonResponse(400, ["message" => "Invalid date format"]);
+        return;
+    }
+    
+    $date_diff = date_diff($date1, $date2, true);
+    if ($date1 > $date2 && $date_diff->y >= 1) {
+        sendJsonResponse(400, ["message"=> "Invalid date - date is too ancient"]);
+        return;
+    }
+    if ($date1 < $date2) {
+        sendJsonResponse(400, ["message"=> "Invalid date - date is in the future"]);
+        return;
+    }
+
+    $stmt = $conn->prepare(
         "UPDATE $transactions_table_name 
-        SET account_id = ?, category_id = ?, amount = ?, is_income = ?, payment_date = ?, description = ?
+        SET category_id = ?, amount = ?, payment_date = ?, description = ?
         WHERE id = ?");
-    $stmt->bind_param("ssssssi", $accountId, $categoryId, $amount, $isIncome, $paymentDate, $description, $id);
+    $stmt->bind_param("iissi", $categoryId, $amount, $paymentDate, $description, $id);
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
@@ -317,11 +423,30 @@ function handlePutRequest($conn) {
 function handleDeleteRequest($conn) {
     global $transactions_table_name;
     global $accounts_table_name;
+    global $user;
+    global $isAdmin;
+
     $data = json_decode(file_get_contents("php://input"), true);
 
     if (isset($data['id'])) {
         $id = $data['id'];
-    
+
+        $stmt = $conn->prepare(
+            "SELECT a.user_id FROM
+            $accounts_table_name a
+            JOIN $transactions_table_name t
+            ON a.id = t.account_id
+            WHERE a.user_id = ?
+            AND t.id = ?"
+        );
+        $stmt->bind_param("ii", $user['id'], $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(403, ["message" => "You are not permitted to access this transaction"]);
+            return;
+        }
+
         $stmt = $conn->prepare("DELETE FROM $transactions_table_name WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
@@ -329,8 +454,9 @@ function handleDeleteRequest($conn) {
         if ($stmt->affected_rows > 0) {
             sendJsonResponse(200, ["message" => "Transaction deleted successfully"]);
         } else {
-            sendJsonResponse(404, ["message" => "Transaction not found"]);
+            sendJsonResponse(404, ["message" => "Query execution failed: " . $conn->error]);
         }
+        $stmt->close();
     } elseif (isset($data['account_id'])) {
         $accountId = $data['account_id'];
 
@@ -343,6 +469,18 @@ function handleDeleteRequest($conn) {
             return;
         }
 
+        $stmt = $conn->prepare(
+            "SELECT a.id
+            FROM $accounts_table_name a
+            WHERE a.user_id = ?"
+        );
+        $stmt->bind_param("i", $user['id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(403, ['message'=> 'You are not permitted to access this account\'s transactions']);
+        }
+
         $stmt = $conn->prepare("DELETE FROM $transactions_table_name WHERE account_id = ?");
         $stmt->bind_param("i", $accountId);
         $stmt->execute();
@@ -353,6 +491,10 @@ function handleDeleteRequest($conn) {
             sendJsonResponse(200, ["message"=> "Account has no transactions"]);
         }
     } else {
+        if (!$isAdmin) {
+            sendJsonResponse(403, ["message"=> "You are not permitted to delete all transactions"]);
+            return;
+        }
         $stmt = $conn->prepare("DELETE FROM $transactions_table_name");
         $stmt->execute();
     
