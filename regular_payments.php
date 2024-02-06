@@ -45,27 +45,27 @@ function handleGetRequest($conn) {
     global $frequencies_table_name;
     global $users_table_name;
     global $user;
+    global $isAdmin;
+
     if (isset($_GET['id'])) {
         $id = $_GET['id'];
 
         $stmt = $conn->prepare(
-            "SELECT $regular_payments_table_name.id,
-            $regular_payments_table_name.account_id,
-            $regular_payments_table_name.category_id,
-            $regular_payments_table_name.frequency_id,
-            $regular_payments_table_name.amount,
-            $regular_payments_table_name.is_income,
-            $regular_payments_table_name.start_date,
-            $regular_payments_table_name.last_payment_date,
-            $regular_payments_table_name.description
-            FROM $regular_payments_table_name
-            INNER JOIN (
-                $accounts_table_name INNER JOIN $users_table_name
-                ON $accounts_table_name.user_id = $users_table_name.id
-            )
-            ON $regular_payments_table_name.account_id = $accounts_table_name.id
+            "SELECT r.id,
+            r.account_id,
+            r.category_id,
+            r.frequency_id,
+            r.amount,
+            r.is_income,
+            r.start_date,
+            r.last_payment_date,
+            r.description
+            FROM $regular_payments_table_name r
+            JOIN $accounts_table_name a ON r.account_id = a.id
+            JOIN $users_table_name u ON a.user_id = u.id
             WHERE $users_table_name.id = ?
-            AND $regular_payments_table_name.id = ?"
+            AND $regular_payments_table_name.id = ?
+            GROUP BY r.id"
         );
         $stmt->bind_param("ii", $user['id'], $id);
         $stmt->execute();
@@ -88,44 +88,50 @@ function handleGetRequest($conn) {
     } elseif (isset($_GET['account_id'])) {
         $accountId = $_GET['account_id'];
 
-        // $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE id = ?");
-        // $stmt->bind_param("i", $accountId);
-        // $stmt->execute();
-        // $result = $stmt->get_result();
-        // if ($result === false || $result->num_rows === 0) {
-        //     sendJsonResponse(404, ["message"=> "Account not found"]);
-        //     return;
-        // }
+        $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE id = ?");
+        $stmt->bind_param("i", $accountId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(404, ["message"=> "Account not found"]);
+            return;
+        }
 
-        // $stmt = $conn->prepare("SELECT * FROM $regular_payments_table_name WHERE account_id = ?");
-        // $stmt->bind_param("i", $accountId);
-        // $stmt->execute();
-        // $result = $stmt->get_result();
-        
         $stmt = $conn->prepare(
-            "SELECT $regular_payments_table_name.id,
-            $regular_payments_table_name.account_id,
-            $regular_payments_table_name.category_id,
-            $regular_payments_table_name.frequency_id,
-            $regular_payments_table_name.amount,
-            $regular_payments_table_name.is_income,
-            $regular_payments_table_name.start_date,
-            $regular_payments_table_name.last_payment_date,
-            $regular_payments_table_name.description
-            FROM $regular_payments_table_name
-            INNER JOIN (
-                $accounts_table_name INNER JOIN $users_table_name
-                ON $accounts_table_name.user_id = $users_table_name.id
-            )
-            ON $regular_payments_table_name.account_id = $accounts_table_name.id
-            WHERE $users_table_name.id = ?
-            AND $accounts_table_name.id = ?"
+            "SELECT *
+            FROM $accounts_table_name
+            WHERE user_id = ? AND id = ?"
         );
         $stmt->bind_param("ii", $user['id'], $accountId);
         $stmt->execute();
         $result = $stmt->get_result();
-        $regular_payments = [];
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(403, ["message"=> "You are not permitted to access this account's data"]);
+            return;
+        }
         
+        $stmt = $conn->prepare(
+            "SELECT r.id,
+            r.account_id,
+            r.category_id,
+            r.frequency_id,
+            r.amount,
+            r.is_income,
+            r.start_date,
+            r.last_payment_date,
+            r.description
+            FROM $regular_payments_table_name r
+            JOIN $accounts_table_name a ON r.account_id = a.id
+            JOIN $users_table_name u ON u.id = a.user_id
+            WHERE u.id = ?
+            AND a.id = ?
+            GROUP BY r.id"
+        );
+        $stmt->bind_param("ii", $user['id'], $accountId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $regular_payments = [];
         while ($row = $result->fetch_assoc()) {
             $frequency_result = $conn->query("SELECT id, sql_interval FROM $frequencies_table_name WHERE id = $row[frequency_id]");
             $frequency_row = $frequency_result->fetch_assoc();
@@ -138,14 +144,15 @@ function handleGetRequest($conn) {
 
             $regular_payments[] = $row;
         }
-        
-        if ($result === false || $result->num_rows === 0) {
-            sendJsonResponse(404, ['message' => 'Account not found or not authorized']);
-            return;
-        }
         sendJsonResponse(200, $regular_payments);
+        $stmt->close();
     } elseif (isset($_GET['user_id'])) {
         $userId = $_GET['user_id'];
+
+        if ($userId != $user['id']) {
+            sendJsonResponse(403, ['message'=> 'You are not permitted to access this user\'s data']);
+            return;
+        }
 
         $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE id = ?");
         $stmt->bind_param("i", $userId);
@@ -156,17 +163,26 @@ function handleGetRequest($conn) {
             return;
         }
 
-        $rp = $regular_payments_table_name;
         $stmt = $conn->prepare(
-            "SELECT $rp.id, $rp.account_id, $rp.category_id, $rp.amount, $rp.is_income, $rp.frequency_id, $rp.start_date, $rp.last_payment_date, $rp.description
-            FROM $rp INNER JOIN $accounts_table_name ON 
-            $rp.account_id = $accounts_table_name.id WHERE user_id = ? 
-            GROUP BY $rp.id");
+            "SELECT r.id,
+            r.account_id,
+            r.category_id,
+            r.amount,
+            r.is_income,
+            r.frequency_id,
+            r.start_date,
+            r.last_payment_date,
+            r.description
+            FROM $regular_payments_table_name r
+            JOIN $accounts_table_name a ON r.account_id = a.id 
+            WHERE user_id = ? 
+            GROUP BY r.id"
+        );
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();
-        $regular_payments = [];
 
+        $regular_payments = [];
         while ($row = $result->fetch_assoc()) {
             $frequency_result = $conn->query("SELECT id, sql_interval FROM $frequencies_table_name WHERE id = $row[frequency_id]");
             $frequency_row = $frequency_result->fetch_assoc();
@@ -180,7 +196,11 @@ function handleGetRequest($conn) {
             $regular_payments[] = $row;
         }
         sendJsonResponse(200, $regular_payments);
+        $stmt->close();
     } else {
+        if (!$isAdmin) {
+            sendJsonResponse(403, ['message'=> 'You are not allowed to access all regular payments']);
+        }
         $result = $conn->query("SELECT * FROM $regular_payments_table_name");
         $regular_payments = [];
         while ($row = $result->fetch_assoc()) {
@@ -202,6 +222,7 @@ function handleGetRequest($conn) {
 function handlePostRequest($conn) {
     global $regular_payments_table_name;
     global $frequencies_table_name;
+    global $categories_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $accountId = $data["account_id"] ?? null;
@@ -215,6 +236,47 @@ function handlePostRequest($conn) {
     $hasEmptyData = hasEmptyData([$accountId, $categoryId, $frequencyId, $amount, $isIncome, $startDate]);
     if ($hasEmptyData) {
         sendJsonResponse(400, ["message" => "All fields are required"]);
+        return;
+    }
+
+    if ($amount <= 0 || !is_numeric($amount)) {
+        sendJsonResponse(400, ["message" => "Invalid amount"]);
+        return;
+    }
+    if (($isIncome != 0 && $isIncome != 1) || !is_numeric($isIncome)) {
+        sendJsonResponse(400, ["message" => "Invalid transaction type"]);
+        return;
+    }
+
+    $date1 = new DateTime("now");
+    $format = 'Y-m-d H:i:s';
+    $date2 = DateTime::createFromFormat($format, $startDate);
+    if ($date2 === false || $date2->format($format) !== $startDate) {
+        sendJsonResponse(400, ["message" => "Invalid date format"]);
+        return;
+    }
+    
+    $date_diff = date_diff($date1, $date2, true);
+    if ($date1 > $date2 && $date_diff->y >= 10) {
+        sendJsonResponse(400, ["message"=> "Invalid date - date is too ancient"]);
+        return;
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT * FROM $categories_table_name
+        WHERE id = ?"
+    );
+    $stmt->bind_param("i", $categoryId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows == 0) {
+        sendJsonResponse(400, ["message"=> "Invalid category"]);
+        return;
+    }
+    $category = $result->fetch_assoc();
+    if (intval($category['is_income']) != $isIncome) {
+        sendJsonResponse(400, ["message"=> "Category and transaction type conflict"]);
         return;
     }
 
@@ -241,42 +303,104 @@ function handlePostRequest($conn) {
 
 function handlePutRequest($conn) {
     global $regular_payments_table_name;
+    global $accounts_table_name;
+    global $categories_table_name;
+    global $frequencies_table_name;
+    global $user;
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $id = $data["id"];
-    $accountId = $data["account_id"];
-    $categoryId = $data["category_id"];
-    $frequencyId = $data["frequency_id"];
-    $amount = $data["amount"];
-    $isIncome = (int)$data["is_income"];
-    $startDate = $data["start_date"];
-    $lastPaymentDate = $data["start_date"];
-    $description = $data["description"];
-    if ($description == "") {
-        $description = null;
+    $id = $data["id"] ?? null;
+    $categoryId = $data["category_id"] ?? null;
+    $frequencyId = $data["frequency_id"] ?? null;
+    $amount = $data["amount"] ?? null;
+    $description = $data["description"] ?? null;
+
+    $hasEmptyData = hasEmptyData([$id, $categoryId, $frequencyId, $amount]);
+
+    if ($hasEmptyData) {
+        sendJsonResponse(400, ["message"=> "All fields are required"]);
+        return;
     }
 
     $stmt = $conn->prepare("SELECT * FROM $regular_payments_table_name WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
-
     if ($result === false || $result->num_rows === 0) {
         sendJsonResponse(404, ["message" => 'Regular payment not found']);
         return;
     }
 
     $stmt = $conn->prepare(
-        "UPDATE $regular_payments_table_name 
-        SET account_id = ?, category_id = ?, frequency_id = ?, amount = ?,
-        is_income = ?, start_date = ?, last_payment_date = ?, description = ?
+        "SELECT a.user_id FROM
+        $accounts_table_name a
+        JOIN $regular_payments_table_name r
+        ON a.id = r.account_id
+        WHERE a.user_id = ?
+        AND r.id = ?"
+    );
+
+    $stmt->bind_param("ii", $user['id'], $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result === false || $result->num_rows === 0) {
+        sendJsonResponse(403, ["message" => "You are not permitted to access this regular payment"]);
+        return;
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT * FROM $categories_table_name
         WHERE id = ?"
     );
-    $stmt->bind_param("ssssssssi", $accountId, $categoryId, $frequencyId, $amount, $isIncome, $startDate, $lastPaymentDate, $description, $id);
+    $stmt->bind_param("i", $categoryId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows == 0) {
+        sendJsonResponse(400, ["message"=> "Invalid category"]);
+        return;
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT * FROM $frequencies_table_name
+        WHERE id = ?"
+    );
+    $stmt->bind_param("i", $frequencyId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows == 0) {
+        sendJsonResponse(400, ["message"=> "Invalid frequency"]);
+        return;
+    }
+    
+    // $date1 = new DateTime("now");
+    // $format = 'Y-m-d H:i:s';
+    // $date2 = DateTime::createFromFormat($format, $paymentDate);
+    // if ($date2 === false || $date2->format($format) !== $paymentDate) {
+    //     sendJsonResponse(400, ["message" => "Invalid date format"]);
+    //     return;
+    // }
+    
+    // $date_diff = date_diff($date1, $date2, true);
+    // if ($date1 > $date2 && $date_diff->y >= 1) {
+    //     sendJsonResponse(400, ["message"=> "Invalid date - date is too ancient"]);
+    //     return;
+    // }
+    // if ($date1 < $date2) {
+    //     sendJsonResponse(400, ["message"=> "Invalid date - date is in the future"]);
+    //     return;
+    // }
+
+    $stmt = $conn->prepare(
+        "UPDATE $regular_payments_table_name 
+        SET category_id = ?, frequency_id = ? amount = ?, description = ?
+        WHERE id = ?");
+    $stmt->bind_param("iiisi", $categoryId, $frequencyId, $amount, $description, $id);
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
-        sendJsonResponse(200, ["message" => 'Regular payment updated successfully']);
+        sendJsonResponse(200, ["message" => 'Transaction updated successfully']);
     } else {
         sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
     }
@@ -286,10 +410,28 @@ function handlePutRequest($conn) {
 function handleDeleteRequest($conn) {
     global $regular_payments_table_name;
     global $accounts_table_name;
+    global $user;
+    global $isAdmin;
     $data = json_decode(file_get_contents("php://input"), true);
 
     if (isset($data['id'])) {
         $id = $data['id'];
+
+        $stmt = $conn->prepare(
+            "SELECT a.user_id FROM
+            $accounts_table_name a
+            JOIN $regular_payments_table_name r
+            ON a.id = r.account_id
+            WHERE a.user_id = ?
+            AND r.id = ?"
+        );
+        $stmt->bind_param("ii", $user['id'], $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(403, ["message" => "You are not permitted to access this regular payment"]);
+            return;
+        }
     
         $stmt = $conn->prepare("DELETE FROM $regular_payments_table_name WHERE id = ?");
         $stmt->bind_param("i", $id);
@@ -311,6 +453,17 @@ function handleDeleteRequest($conn) {
             sendJsonResponse(404, ["message" => "Account not found"]);
             return;
         }
+        $stmt = $conn->prepare(
+            "SELECT a.id
+            FROM $accounts_table_name a
+            WHERE a.user_id = ?"
+        );
+        $stmt->bind_param("i", $user['id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result === false || $result->num_rows === 0) {
+            sendJsonResponse(403, ['message'=> 'You are not permitted to access this account\'s regular payments']);
+        }
 
         $stmt = $conn->prepare("DELETE FROM $regular_payments_table_name WHERE account_id = ?");
         $stmt->bind_param("i", $accountId);
@@ -322,6 +475,10 @@ function handleDeleteRequest($conn) {
             sendJsonResponse(200, ["message"=> "Account has no regular payments"]);
         }
     } else {
+        if (!$isAdmin) {
+            sendJsonResponse(403, "You are not permitted to delete all regular payments");
+            return;
+        }
         $stmt = $conn->prepare("DELETE FROM $regular_payments_table_name");
         $stmt->execute();
     
