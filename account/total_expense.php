@@ -73,14 +73,11 @@ function handleGetRequest($conn) {
     
     $stmt = $conn->prepare(
         "SELECT IFNULL(ROUND(SUM(t.amount), 2), 0) AS total_expense
-        FROM $accounts_table_name a
-        JOIN $transactions_table_name t ON a.id = t.account_id
-        WHERE a.user_id = ?
-        AND a.id = ?
-        AND t.is_income = 0
-        GROUP BY t.id;
+        FROM $transactions_table_name t
+        WHERE t.account_id = ?
+        AND t.is_income = 0;
     ");
-    $stmt->bind_param("ii", $user['id'], $accountId);
+    $stmt->bind_param("i", $accountId);
     $stmt->execute();
     $result = $stmt->get_result();
     $total_expense = 0;

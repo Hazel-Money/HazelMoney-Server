@@ -71,19 +71,16 @@ function handleGetRequest($conn) {
     }
 
     $stmt = $conn->prepare(
-        "SELECT ROUND(a.balance, 0)
-        AS rounded_total_balance
-        FROM accounts a
-        WHERE a.user_id = ?
-        AND a.id = ?
-        GROUP BY a.id
+        "SELECT balance
+        FROM $accounts_table_name
+        WHERE id = ?
     ");
-    $stmt->bind_param("ii", $user['id'], $accountId);
+    $stmt->bind_param("i", $accountId);
     $stmt->execute();
     $result = $stmt->get_result();
     $balance = 0;
-    if ($result !== false && $result->num_rows === 0) {
-        $balance = $result->fetch_assoc()['rounded_total_balance'];
+    if ($result !== false && $result->num_rows !== 0) {
+        $balance = $result->fetch_assoc()['balance'];
     }
     sendJsonResponse(200, ['balance' => $balance]);
     $stmt->close();
