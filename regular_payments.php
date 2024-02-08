@@ -154,7 +154,7 @@ function handleGetRequest($conn) {
             return;
         }
 
-        $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE id = ?");
+        $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();

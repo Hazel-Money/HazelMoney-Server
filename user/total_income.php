@@ -52,6 +52,7 @@ function handleGetRequest($conn) {
 
     if ($result === false || $result->num_rows === 0) {
         sendJsonResponse(404, ["message" => 'User not found']);
+        return;
     }
 
     $result = $conn->query(

@@ -125,16 +125,6 @@ function handlePostRequest($conn, $user_id) {
         return;
     }
 
-    $stmt = $conn->prepare("SELECT * FROM $users_table_name WHERE id = ?");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result === false || $result->num_rows === 0) {
-        sendJsonResponse(400, ["message" => 'User is invalid']);
-        return;
-    }
-
     $stmt = $conn->prepare(
         "INSERT INTO $categories_table_name
         VALUES (NULL, ?, ?, ?, ?, ?)"

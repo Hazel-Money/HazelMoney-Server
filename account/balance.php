@@ -35,36 +35,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 $conn->close();
 
 function handleGetRequest($conn) {
-    global $users_table_name;
-    global $currencies_table_name;
+    if (!isset($_GET["account_id"])) {
+        sendJsonResponse(400, ["message"=> "Account id not provided"]);
+        return;
+    }
     global $user;
-    $userId = $user['id'];
+    global $accounts_table_name;
+    global $currencies_table_name;
+    $accountId = $_GET['id'];
     $stmt = $conn->prepare(
         "SELECT *
-        FROM $users_table_name
+        FROM $accounts_table_name
         WHERE id = ?"
     );
-    $stmt->bind_param("i", $userId);
+    $stmt->bind_param("i", $accountId);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result === false || $result->num_rows === 0) {
-        sendJsonResponse(404, ["message" => 'User not found']);
+        sendJsonResponse(404, ["message" => 'Account not found']);
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT ROUND(a.balance, 0)
+        AS rounded_total_balance
+        FROM accounts a
+        WHERE a.user_id = ?
+        AND a.id = ?
+        GROUP BY a.id
+    ");
+    $stmt->bind_param("ii", $user['id'], $accountId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result === false || $result->num_rows === 0) {
+        sendJsonResponse(403, ['message'=> 'You are not authorized to access this account']);
         return;
     }
-    $user = $result->fetch_assoc();
-
-    $result = $conn->query(
-        "SELECT code
-        FROM $currencies_table_name c
-        INNER JOIN $users_table_name u
-        ON c.id = u.default_currency_id
-        WHERE u.id = $user[id]
-    ");
-    $currency = $result->fetch_assoc()['code'];
-
-    
-    sendJsonResponse(200, ['currency' => $currency]);
+    $balance = $result->fetch_assoc()['rounded_total_balance'];
+    sendJsonResponse(200, ['balance' => $balance]);
     $stmt->close();
 }
 
