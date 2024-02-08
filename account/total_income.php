@@ -43,7 +43,7 @@ function handleGetRequest($conn) {
     global $accounts_table_name;
     global $currencies_table_name;
     global $transactions_table_name;
-    $accountId = $_GET['id'];
+    $accountId = $_GET['account_id'];
     $stmt = $conn->prepare(
         "SELECT *
         FROM $accounts_table_name
@@ -56,26 +56,37 @@ function handleGetRequest($conn) {
     if ($result === false || $result->num_rows === 0) {
         sendJsonResponse(404, ["message" => 'Account not found']);
     }
-    $user = $result->fetch_assoc();
-
+    
     $stmt = $conn->prepare(
-        "SELECT ROUND(SUM(t.amount), 2) AS total_income
+        "SELECT *
+        FROM $accounts_table_name
+        WHERE id = ?
+        AND user_id = ?"
+    );
+    $stmt->bind_param("ii", $accountId, $user["id"]);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result === false || $result->num_rows === 0) {
+        sendJsonResponse(404, ["message" => 'You are not allowed to access this account!']);
+    }
+    
+    $stmt = $conn->prepare(
+        "SELECT IFNULL(ROUND(SUM(t.amount), 2), 0) AS total_income
         FROM $accounts_table_name a
         JOIN $transactions_table_name t ON a.id = t.account_id
         WHERE a.user_id = ?
         AND a.id = ?
         AND t.is_income = 1
-        GROUP BY users.id;
+        GROUP BY t.id;
     ");
     $stmt->bind_param("ii", $user['id'], $accountId);
     $stmt->execute();
     $result = $stmt->get_result();
-    if ($result === false || $result->num_rows === 0) {
-        sendJsonResponse(403, ['message'=> 'You are not authorized to access this account']);
-        return;
+    $total_income = 0;
+    if ($result !== false && $result->num_rows !== 0) {
+        $total_income = $result->fetch_assoc()['total_income'];
     }
-    $total_income = $result->fetch_assoc()['total_income'];
-    
     sendJsonResponse(200, ['total_income' => $total_income]);
     $stmt->close();
 }
@@ -91,4 +102,5 @@ function sendJsonResponse($statusCode, $data) {
     header('Content-Type: application/json');
     http_response_code($statusCode);
     echo json_encode($data);
+    exit;
 }
