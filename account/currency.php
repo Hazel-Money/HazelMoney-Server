@@ -73,7 +73,7 @@ function handleGetRequest($conn) {
     }
 
     $stmt = $conn->prepare(
-        "SELECT code
+        "SELECT symbol
         FROM $currencies_table_name c
         JOIN $accounts_table_name a
         ON c.id = a.currency_id
@@ -82,7 +82,7 @@ function handleGetRequest($conn) {
     $stmt->bind_param("i", $accountId);
     $stmt->execute();
     $result = $stmt->get_result();
-    $currency = $result->fetch_assoc()['code'];
+    $currency = $result->fetch_assoc()['symbol'];
 
     sendJsonResponse(200, ['currency' => $currency]);
     $stmt->close();

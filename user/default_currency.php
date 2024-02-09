@@ -55,13 +55,13 @@ function handleGetRequest($conn) {
     $user = $result->fetch_assoc();
 
     $result = $conn->query(
-        "SELECT code
+        "SELECT symbol
         FROM $currencies_table_name c
         INNER JOIN $users_table_name u
         ON c.id = u.default_currency_id
         WHERE u.id = $user[id]
     ");
-    $currency = $result->fetch_assoc()['code'];
+    $currency = $result->fetch_assoc()['symbol'];
 
     
     sendJsonResponse(200, ['currency' => $currency]);
