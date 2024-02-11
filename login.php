@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once 'db_connection.php';
+require_once 'functions.php';
 require "vendor/autoload.php";
 $env = parse_ini_file('.env');
 use \Firebase\JWT\JWT;
@@ -49,8 +50,9 @@ function handlePostRequest($conn) {
         sendJsonResponse(400, ["message"=> "Email or password does not match"]);
         return;
     }
+
     $password_hash = $user['password_hash'];
-    if (!password_verify($password, $password_hash)) {
+    if (!validatePassword($password, $user['id'])) {
         sendJsonResponse(400, ["message"=> "Email or password does not match"]);
         return;
     }
