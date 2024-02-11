@@ -102,9 +102,6 @@ function handlePutRequest($conn) {
         sendJsonResponse(400, ["message" => "An error occurred while processing your request"]);
         return;
     }
-    // $result = $conn->query(
-    //     "UPDATE $ac"
-    // );
 }
 
 function handleOptionsRequest() {

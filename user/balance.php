@@ -54,7 +54,7 @@ function handleGetRequest($conn) {
     $user = $result->fetch_assoc();
 
     $result = $conn->query(
-        "SELECT ROUND(SUM(accounts.balance * currencies.inverse_rate * user_currencies.rate), 0)
+        "SELECT IFNULL(ROUND(SUM(accounts.balance * currencies.inverse_rate * user_currencies.rate), 0), 0)
         AS rounded_total_balance
         FROM users 
         JOIN accounts ON users.id = accounts.user_id
@@ -63,8 +63,8 @@ function handleGetRequest($conn) {
         WHERE users.id = $user[id]
         GROUP BY users.id
     ");
-    $balance = $result->fetch_assoc()['rounded_total_balance'];
 
+    $balance = $result->fetch_assoc()['rounded_total_balance'] ?? 0;
     
     sendJsonResponse(200, ['balance' => $balance]);
     $stmt->close();
