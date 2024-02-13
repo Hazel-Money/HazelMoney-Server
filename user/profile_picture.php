@@ -76,7 +76,33 @@ function handleGetRequest($conn) {
 
 function handlePostRequest($conn) {
     if (!isset($_FILES["image"]) || $_FILES["image"]["error"] != 0) {
-        sendJsonResponse(400, ["message" => "No file uploaded or an error occurred during upload."]);
+        $errorMessage = "";
+
+        switch ($_FILES["image"]["error"]) {
+            case UPLOAD_ERR_INI_SIZE:
+            case UPLOAD_ERR_FORM_SIZE:
+                $errorMessage = "The uploaded file exceeds the upload_max_filesize directive in php.ini.";
+                break;
+            case UPLOAD_ERR_PARTIAL:
+                $errorMessage = "The uploaded file was only partially uploaded.";
+                break;
+            case UPLOAD_ERR_NO_FILE:
+                $errorMessage = "No file was uploaded.";
+                break;
+            case UPLOAD_ERR_NO_TMP_DIR:
+                $errorMessage = "Missing temporary folder.";
+                break;
+            case UPLOAD_ERR_CANT_WRITE:
+                $errorMessage = "Failed to write file to disk.";
+                break;
+            case UPLOAD_ERR_EXTENSION:
+                $errorMessage = "A PHP extension stopped the file upload.";
+                break;
+            default:
+                $errorMessage = "No file uploaded or an error occurred during upload.";
+                break;
+        }
+        sendJsonResponse(400, ["message" => $errorMessage]);
         return;
     }
     global $user;
