@@ -37,10 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 $conn->close();
 
 function handleGetRequest($conn) {
-    header('Content-Type: image/jpeg');
     global $user;
     global $env;
     global $users_table_name;
+    
+
     $result = $conn->query(
         "SELECT profile_picture_path
         FROM $users_table_name u
@@ -49,6 +50,27 @@ function handleGetRequest($conn) {
     $target_directory = $_SERVER["DOCUMENT_ROOT"] . $env["pfp_path"];
     $file_name = $result->fetch_assoc()["profile_picture_path"];
     $target_file_path = $target_directory . $file_name;
+    if (!file_exists($target_file_path)) {
+        mkdir($target_directory, 0777, true);
+        $target_file_path = $target_directory . "\default.png";
+        $conn->query(
+            "UPDATE $users_table_name u
+            SET u.profile_picture_path = 'default.png'
+            WHERE u.id = $user[id]"
+        );
+        $image_data = file_get_contents($env["default_pfp_url"]);
+        if ($image_data === false) {
+            sendJsonResponse(500, ["message" => "Failed to fetch default profile picture image"]);
+            return;
+        }
+        $bytes_written = file_put_contents($target_file_path, $image_data);
+        if ($bytes_written === 0) {
+            sendJsonResponse(500, ["message" => "Failed to write default profile picture image"]);
+            return;
+        }
+    }
+    header('Content-Type: image/jpeg');
+    http_response_code(200);
     readfile($target_file_path);
 }
 
@@ -99,8 +121,9 @@ function handlePostRequest($conn) {
         sendJsonResponse(200, ["message" => "Something went wrong idk"]);
         return;
     }
-
-    sendJsonResponse(200, ["message" => "Profile picture uploaded successfully 🥰"]);
+    header('Content-Type: image/jpeg');
+    http_response_code(200);
+    readfile($target_file_path);
 }
 
 function handleOptionsRequest() {
