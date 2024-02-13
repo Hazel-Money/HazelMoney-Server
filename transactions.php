@@ -42,6 +42,7 @@ function handleGetRequest($conn) {
     global $transactions_table_name;
     global $accounts_table_name;
     global $categories_table_name;
+    global $currencies_table_name;
     global $users_table_name;
     if (isset($_GET['id'])) {
         $id = $_GET['id'];
@@ -60,11 +61,12 @@ function handleGetRequest($conn) {
 
         $stmt  = $conn->prepare(
             "SELECT t.id, t.account_id, t.category_id, t.amount,
-            t.is_income, t.payment_date, t.description, c.icon
+            t.is_income, t.payment_date, t.description, c.icon, curr.symbol AS currency
             FROM $users_table_name u
             JOIN $accounts_table_name a ON u.id = a.user_id
             JOIN $transactions_table_name t ON a.id = t.account_id
             JOIN $categories_table_name c ON t.category_id = c.id
+            JOIN $currencies_table_name curr ON a.currency_id = curr.id
             WHERE u.id = ?
             AND t.id = ?
             GROUP BY t.id"
@@ -102,8 +104,12 @@ function handleGetRequest($conn) {
 
         if (isset($_GET['is_income'])) {
             $stmt = $conn->prepare(
-                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
-                FROM $transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id
+                "SELECT t.id, t.account_id, t.category_id, t.amount,
+                t.is_income, t.payment_date, t.description, c.icon, curr.symbol AS currency
+                FROM $transactions_table_name t 
+                JOIN $categories_table_name c ON t.category_id = c.id
+                JOIN $accounts_table_name a ON t.account_id = a.id
+                JOIN $currencies_table_name curr ON a.currency_id = curr.id
                 WHERE t.account_id = ? AND t.is_income = ?
                 GROUP BY t.id
                 ORDER BY t.payment_date DESC"
@@ -111,8 +117,12 @@ function handleGetRequest($conn) {
             $stmt->bind_param("ii", $accountId, $_GET['is_income']);
         } else {
             $stmt = $conn->prepare(
-                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
-                FROM $transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id
+                "SELECT t.id, t.account_id, t.category_id, t.amount,
+                t.is_income, t.payment_date, t.description, c.icon, curr.symbol AS currency
+                FROM $transactions_table_name t
+                JOIN $categories_table_name c ON t.category_id = c.id
+                JOIN $accounts_table_name a ON t.account_id = a.id
+                JOIN $currencies_table_name curr ON a.currency_id = curr.id
                 WHERE t.account_id = ?
                 GROUP BY t.id
                 ORDER BY t.payment_date DESC"
@@ -146,9 +156,12 @@ function handleGetRequest($conn) {
 
         if (isset($_GET['is_income'])) {
             $stmt = $conn->prepare(
-                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
-                FROM $accounts_table_name a INNER JOIN 
-                ($transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id) ON a.id = t.account_id
+                "SELECT t.id, t.account_id, t.category_id, t.amount,
+                t.is_income, t.payment_date, t.description, c.icon, curr.symbol AS currency
+                FROM $accounts_table_name a
+                JOIN $transactions_table_name t ON a.id = t.account_id
+                JOIN $categories_table_name c ON t.category_id = c.id
+                JOIN $currencies_table_name curr ON a.currency_id = curr.id
                 WHERE a.user_id = ? AND t.is_income = ?
                 GROUP BY t.id
                 ORDER BY t.payment_date DESC"
@@ -157,10 +170,13 @@ function handleGetRequest($conn) {
         }
         else {
             $stmt = $conn->prepare(
-                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
-                FROM $accounts_table_name a INNER JOIN 
-                ($transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id) ON a.id = t.account_id
-                WHERE a.user_id = ? 
+                "SELECT t.id, t.account_id, t.category_id, t.amount,
+                t.is_income, t.payment_date, t.description, c.icon, curr.symbol AS currency
+                FROM $accounts_table_name a
+                JOIN $transactions_table_name t ON a.id = t.account_id
+                JOIN $categories_table_name c ON t.category_id = c.id
+                JOIN $currencies_table_name curr ON a.currency_id = curr.id
+                WHERE a.user_id = ?
                 GROUP BY t.id
                 ORDER BY t.payment_date DESC"
             );
@@ -183,19 +199,27 @@ function handleGetRequest($conn) {
         $result = $conn->query("SELECT * FROM $transactions_table_name");
         if (isset($_GET['is_income'])) {
             $stmt = $conn->prepare(
-                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
-                FROM $transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id
+                "SELECT t.id, t.account_id, t.category_id, t.amount,
+                t.is_income, t.payment_date, t.description, c.icon, curr.symbol AS currency
+                FROM $accounts_table_name a
+                JOIN $transactions_table_name t ON a.id = t.account_id
+                JOIN $categories_table_name c ON t.category_id = c.id
+                JOIN $currencies_table_name curr ON a.currency_id = curr.id
                 WHERE t.is_income = ?
                 GROUP BY t.id
                 ORDER BY t.payment_date DESC"
-                );
+            );
             $stmt->bind_param("i", $_GET["is_income"]);
             $stmt->execute();
             $result = $stmt->get_result();
         } else {
             $result = $conn->query(
-                "SELECT t.id, t.account_id, t.category_id, t.amount, t.is_income, t.payment_date, t.description, c.icon
-                FROM $transactions_table_name t INNER JOIN $categories_table_name c ON t.category_id = c.id
+                "SELECT t.id, t.account_id, t.category_id, t.amount,
+                t.is_income, t.payment_date, t.description, c.icon, curr.symbol AS currency
+                FROM $accounts_table_name a
+                JOIN $transactions_table_name t ON a.id = t.account_id
+                JOIN $categories_table_name c ON t.category_id = c.id
+                JOIN $currencies_table_name curr ON a.currency_id = curr.id
                 GROUP BY t.id
                 ORDER BY t.payment_date DESC"
             );
