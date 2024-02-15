@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../db_connection.php';
 require_once '../authorization.php';
+require_once '../functions.php';
 $env = parse_ini_file("../.env");
 
 $authResponse = authorizeUser();
@@ -51,11 +52,11 @@ function handleGetRequest($conn) {
     $file_name = $result->fetch_assoc()["profile_picture_path"];
     $target_file_path = $target_directory . $file_name;
     if (!file_exists($target_file_path)) {
-        mkdir($target_directory, 0777, true);
-        $target_file_path = $target_directory . "\default.png";
+        createDirectoryIfNotExists($target_directory);
+        $target_file_path = $target_directory . $env["default_pfp_name"];
         $conn->query(
             "UPDATE $users_table_name u
-            SET u.profile_picture_path = 'default.png'
+            SET u.profile_picture_path = $env[default_pfp_name]
             WHERE u.id = $user[id]"
         );
         $image_data = file_get_contents($env["default_pfp_url"]);
@@ -123,9 +124,7 @@ function handlePostRequest($conn) {
     $file_name = $user['id'] . '_' . time() . ".$extension";
     $target_file_path = $target_directory . $file_name;
 
-    if (!file_exists($target_directory)) {
-        mkdir($target_directory, 0777, true);
-    }
+    createDirectoryIfNotExists($target_directory);
 
     if (file_exists($target_file_path)) {
         sendJsonResponse(500, ["message" => "File already exists. Whoever made this function is stupid"]);

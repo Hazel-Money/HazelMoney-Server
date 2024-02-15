@@ -24,3 +24,9 @@ function validatePassword($password, $user_id) {
     
     return true;
 }
+
+function createDirectoryIfNotExists($directory) {
+    if (!file_exists($directory)) {
+        mkdir($directory, 0777, true);
+    } 
+}

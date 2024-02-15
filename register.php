@@ -10,6 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once 'db_connection.php';
+require_once 'functions.php';
+$env = parse_ini_file('.env');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     handlePostRequest($conn);
@@ -19,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $conn->close();
 
 function handlePostRequest($conn) {
+    global $env;
     global $users_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
@@ -26,6 +29,8 @@ function handlePostRequest($conn) {
     $name = $data['username'] ?? null;
     $password = isset($data['password']) ? password_hash($data['password'], PASSWORD_BCRYPT) : null;
     $default_currency_id = 1;
+    $profile_picture_path = $_SERVER["DOCUMENT_ROOT"] . $env["pfp_path"];
+    $profile_picture_name = $env["default_pfp_name"];
 
     $hasEmptyData = hasEmptyData([$email, $name, $password]);
     if ($hasEmptyData) {
@@ -33,8 +38,9 @@ function handlePostRequest($conn) {
         return;
     }
 
-    $stmt = $conn->prepare("INSERT INTO $users_table_name (email, username, password_hash, default_currency_id) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("sssi", $email, $name, $password, $default_currency_id);
+    createDirectoryIfNotExists($profile_picture_path);
+    $stmt = $conn->prepare("INSERT INTO $users_table_name (email, username, password_hash, default_currency_id, profile_picture_path) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssi", $email, $name, $password, $default_currency_id, $profile_picture_name);
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
