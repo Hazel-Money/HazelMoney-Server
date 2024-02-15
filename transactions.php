@@ -471,6 +471,25 @@ function handleDeleteRequest($conn) {
             return;
         }
 
+        $stmt = $conn->prepare(
+            "SELECT *
+            FROM $transactions_table_name t
+            WHERE t.id = ?"
+        );
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $transaction = $result->fetch_assoc();
+
+        $operation = ($transaction['is_income'] == 1) ? '-' : '+';
+        $stmt = $conn->prepare(
+            "UPDATE $accounts_table_name a
+            SET a.balance = a.balance $operation ?
+            WHERE a.id = ?"
+        );
+        $stmt->bind_param("si", $transaction['amount'], $transaction['account_id']);
+        $stmt->execute();
+
         $stmt = $conn->prepare("DELETE FROM $transactions_table_name WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
@@ -503,6 +522,26 @@ function handleDeleteRequest($conn) {
         $result = $stmt->get_result();
         if ($result === false || $result->num_rows === 0) {
             sendJsonResponse(403, ['message'=> 'You are not permitted to access this account\'s transactions']);
+        }
+        
+        $stmt = $conn->prepare(
+            "SELECT * 
+            FROM $transactions_table_name t
+            WHERE t.account_id = ?"
+        );
+        $stmt->bind_param("i", $accountId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        while ($transaction = $result->fetch_assoc()) {
+            $operation = ($transaction['is_income'] == 1) ? '-' : '+';
+            $stmt = $conn->prepare(
+                "UPDATE $accounts_table_name a
+                SET a.balance = a.balance $operation ?
+                WHERE a.id = ?"
+            );
+            $stmt->bind_param("si", $transaction['amount'], $transaction['account_id']);
+            $stmt->execute();
         }
 
         $stmt = $conn->prepare("DELETE FROM $transactions_table_name WHERE account_id = ?");
