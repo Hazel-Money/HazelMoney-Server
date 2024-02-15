@@ -40,7 +40,7 @@ function handlePostRequest($conn) {
 
     createDirectoryIfNotExists($profile_picture_path);
     $stmt = $conn->prepare("INSERT INTO $users_table_name (email, username, password_hash, default_currency_id, profile_picture_path) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssi", $email, $name, $password, $default_currency_id, $profile_picture_name);
+    $stmt->bind_param("sssis", $email, $name, $password, $default_currency_id, $profile_picture_name);
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
