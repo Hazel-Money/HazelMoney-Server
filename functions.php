@@ -73,3 +73,19 @@ function validatePasswordForRegistration($password) {
         return $errors;
     }
 }
+
+function sendJsonResponse($statusCode, $data) {
+    header('Content-Type: application/json');
+    http_response_code($statusCode);
+    echo json_encode($data);
+    exit;
+}
+
+function hasEmptyData(array $data) {
+    foreach ($data as $element) {
+        if (is_null($element) || empty($element) && $element != 0) {
+            return true;
+        }
+    }
+    return false;
+}

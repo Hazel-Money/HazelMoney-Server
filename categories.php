@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'db_connection.php';
 require_once 'authorization.php';
+require_once 'functions.php';
 
 $authResponse = authorizeUser();
 $auth = json_decode($authResponse, true);
@@ -145,19 +146,4 @@ function handleOptionsRequest($coon) {
     header('Access-Control-Allow-Methods: OPTIONS, GET, POST');
     header('Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With');
     exit;
-}
-
-function sendJsonResponse($statusCode, $data) {
-    header('Content-Type: application/json');
-    http_response_code($statusCode);
-    echo json_encode($data);
-}
-
-function hasEmptyData(array $data) {
-    foreach ($data as $element) {
-        if (is_null($element) || empty($element) && $element != 0) {
-            return true;
-        }
-    }
-    return false;
 }
