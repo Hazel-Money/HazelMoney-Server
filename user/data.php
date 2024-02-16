@@ -1,8 +1,8 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
-$allowedMethods = ['PUT', 'OPTIONS'];
-header("Access-Control-Allow-Methods: PUT, OPTIONS");
+$allowedMethods = ['PUT', 'OPTIONS, GET'];
+header("Access-Control-Allow-Methods: GET, PUT, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
@@ -28,7 +28,9 @@ $isAdmin = $user['id'] == $env['admin_id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     handlePutRequest($conn);
-} elseif (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
+} elseif($_SERVER['REQUEST_METHOD'] === 'GET') {
+    handleGetRequest($conn);
+}elseif (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
     sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 } else {
     sendJsonResponse(403, ["message" => "You are not allowed to access this content!"]);
@@ -94,6 +96,21 @@ function handlePutRequest($conn) {
         sendJsonResponse(400, ["message" => "An error occurred when updating user data"]);
     }
     sendJsonResponse(200, ["message" => "Updated user data successfully"]);
+}
+
+function handleGetRequest($conn) {
+    global $user;
+    global $users_table_name;
+    $result = $conn->query(
+        "SELECT u.username, u.email
+        FROM $users_table_name u
+        WHERE u.id = $user[id]"
+    );
+    if ($result->num_rows === 0) {
+        sendJsonResponse(500, ["message" => "Something went wrong, sorry!"]);
+    }
+    $data = $result->fetch_assoc();
+    sendJsonResponse(200, $data);
 }
 
 function handleOptionsRequest() {
