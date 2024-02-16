@@ -1,5 +1,7 @@
 <?php
 require_once "db_connection.php";
+$env = parse_ini_file(".env");
+
 function validatePassword($password, $user_id) {
     global $conn;
     global $users_table_name;
@@ -29,4 +31,45 @@ function createDirectoryIfNotExists($directory) {
     if (!file_exists($directory)) {
         mkdir($directory, 0777, true);
     } 
+}
+
+
+function validateEmail($email) {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    list($username, $domain) = explode('@', $email);
+
+    if (checkdnsrr($domain, 'MX')) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function validatePasswordForRegistration($password) {
+    $errors = [];
+
+    if (strlen($password) < 8) {
+        $errors[] = "Password must be at least 8 characters long.";
+    }
+
+    if (!preg_match('/[A-Z]/', $password)) {
+        $errors[] = "Password must contain at least one uppercase letter.";
+    }
+
+    if (!preg_match('/[a-z]/', $password)) {
+        $errors[] = "Password must contain at least one lowercase letter.";
+    }
+
+    if (!preg_match('/\d/', $password)) {
+        $errors[] = "Password must contain at least one number.";
+    }
+
+    if (empty($errors)) {
+        return true;
+    } else {
+        return $errors;
+    }
 }
