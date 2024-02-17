@@ -13,17 +13,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once 'db_connection.php';
 require_once 'authorization.php';
 require_once 'functions.php';
+$env = parse_ini_file('.env');
 
-$authResponse = authorizeUser();
-$auth = json_decode($authResponse, true);
-
-if (isset($auth['message'])) {
-    sendJsonResponse(401, $auth['message']);
-    return;
-}
-
-$user = $auth['data'];
-$isAdmin = $user['id'] == 1;
+$user = authorizeUser();
+$isAdmin = $user['id'] == $env['admin_id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     handleGetRequest($conn, $user['id']);

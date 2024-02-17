@@ -1,5 +1,6 @@
 <?php
 include_once 'db_connection.php';
+include_once 'functions.php';
 require "vendor/autoload.php";
 use \Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -15,7 +16,7 @@ function authorizeUser() {
     } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
         $authHeader = $_SERVER["REDIRECT_HTTP_AUTHORIZATION"];
     } else {
-        return json_encode(["message" => "JWT Authorization Required"]);
+        sendJsonResponse(401, ["message" => "JWT Authorization Required"]);
     }
     $authHeaderArray = explode(" ", $authHeader);
     if (isset($authHeaderArray[1])) {
@@ -24,11 +25,11 @@ function authorizeUser() {
         $alg = $env['jwt_alg'];
         try {
             $decoded = JWT::decode($jwt, new Key($key, $alg));
-            return json_encode($decoded);
+            return (array)$decoded->data;
         } catch (Exception $e) {
-            return json_encode(["message" => $e->getMessage()]);
+            sendJsonResponse(401, ["message" => $e->getMessage()]);
         }   
     } else {
-        return json_encode(["message" => "JWT Authorization Required"]);
+        sendJsonResponse(401, ["message" => "JWT Authorization Required"]);
     }
 }

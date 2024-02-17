@@ -15,21 +15,13 @@ require_once 'authorization.php';
 require_once 'functions.php';
 $env = parse_ini_file(".env");
 
-$authResponse = authorizeUser();
-$auth = json_decode($authResponse, true);
-
-if (isset($auth['message'])) {
-    sendJsonResponse(401, $auth['message']);
-    return;
-}
-
-$user = $auth['data'];
-$isAdmin = $user['id'] == $env['admin_id'];
+$user = authorizeUser();
+$isAdmin = $user['id']== $env['admin_id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    handleGetRequest($conn, $user['id']);
+    handleGetRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    handlePostRequest($conn, $user['id']);
+    handlePostRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     handlePutRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
@@ -41,8 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 $conn->close();
 
-function handleGetRequest($conn, $user_id) {
+function handleGetRequest($conn) {
     global $accounts_table_name;
+    global $user;
     if (isset($_GET['id'])) {
         $accountId = $_GET['id'];
         $stmt = $conn->prepare("SELECT * FROM $accounts_table_name WHERE id = ?");
@@ -55,14 +48,14 @@ function handleGetRequest($conn, $user_id) {
             return;
         }
         $account = $result->fetch_assoc();
-        if ($account['user_id'] != $user_id) {
+        if ($account['user_id'] != $user['id']) {
             sendJsonResponse(403, ['message'=> 'You are not permitted to access this account!']);
             return;
         }
         sendJsonResponse(200, $account);
         $stmt->close();
     } elseif (isset($_GET['user_id'])) {
-        if ($user_id != $_GET['user_id']) {
+        if ($user['id'] != $_GET['user_id']) {
             sendJsonResponse(403, ['message'=> 'You are not permitted to access this account!']);
             return;
         }
@@ -92,9 +85,10 @@ function handleGetRequest($conn, $user_id) {
     }
 }
 
-function handlePostRequest($conn, $request_user_id) {
+function handlePostRequest($conn) {
     global $accounts_table_name;
     global $currencies_table_name;
+    global $user;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $user_id = $data['user_id'] ?? null;
@@ -108,7 +102,7 @@ function handlePostRequest($conn, $request_user_id) {
         return;
     }
 
-    if ($user_id != $request_user_id) {
+    if ($user_id != $user['id']) {
         sendJsonResponse(403, ["message"=> "You are not allowed to create this account!"]);
     }
 
