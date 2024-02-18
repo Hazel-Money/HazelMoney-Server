@@ -302,7 +302,6 @@ function handlePostRequest($conn) {
 
     if ($result->num_rows == 0) {
         sendJsonResponse(400, ["message"=> "Account not found"]);
-        return;
     }
 
     $stmt = $conn->prepare(
@@ -315,7 +314,7 @@ function handlePostRequest($conn) {
     $result = $stmt->get_result();
 
     if ($result === false || $result->num_rows === 0) {
-        sendJsonResponse(403, ['message'=> 'Provided account does not belong to you']);
+        sendJsonResponse(403, ['message'=> 'Provided account is invalid or not your property']);
         return;
     }
 
@@ -374,6 +373,7 @@ function handlePutRequest($conn) {
         sendJsonResponse(404, ["message" => 'Transaction not found']);
         return;
     }
+    $transaction = $result->fetch_assoc();
 
     $stmt = $conn->prepare(
         "SELECT a.user_id FROM
@@ -401,7 +401,11 @@ function handlePutRequest($conn) {
 
     if ($result->num_rows == 0) {
         sendJsonResponse(400, ["message"=> "Invalid category"]);
-        return;
+    }
+
+    $category = $result->fetch_assoc();
+    if ($category['is_income'] !== $transaction['is_income']) {
+        sendJsonResponse(400, ["message"=> "Category and transaction type conflict"]);
     }
 
     $date1 = new DateTime("now");
@@ -409,17 +413,14 @@ function handlePutRequest($conn) {
     $date2 = DateTime::createFromFormat($format, $paymentDate);
     if ($date2 === false || $date2->format($format) !== $paymentDate) {
         sendJsonResponse(400, ["message" => "Invalid date format"]);
-        return;
     }
     
     $date_diff = date_diff($date1, $date2, true);
     if ($date1 > $date2 && $date_diff->y >= 1) {
         sendJsonResponse(400, ["message"=> "Invalid date - date is too ancient"]);
-        return;
     }
     if ($date1 < $date2) {
         sendJsonResponse(400, ["message"=> "Invalid date - date is in the future"]);
-        return;
     }
 
     $stmt = $conn->prepare(
@@ -431,6 +432,8 @@ function handlePutRequest($conn) {
 
     if ($stmt->affected_rows > 0) {
         sendJsonResponse(200, ["message" => 'Transaction updated successfully']);
+    } elseif ($stmt->affected_rows === 0) {
+        sendJsonResponse(204, []);
     } else {
         sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
     }
