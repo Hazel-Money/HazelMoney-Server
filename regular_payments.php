@@ -37,6 +37,7 @@ function handleGetRequest($conn) {
     global $categories_table_name;
     global $frequencies_table_name;
     global $users_table_name;
+    global $currencies_table_name;
     global $user;
     global $isAdmin;
 
@@ -52,12 +53,14 @@ function handleGetRequest($conn) {
             r.is_income,
             r.start_date,
             r.last_payment_date,
-            r.description
+            r.description,
+            c.symbol AS currency
             FROM $regular_payments_table_name r
             JOIN $accounts_table_name a ON r.account_id = a.id
+            JOIN $currencies_table_name c ON a.currency_id = c.id
             JOIN $users_table_name u ON a.user_id = u.id
-            WHERE $users_table_name.id = ?
-            AND $regular_payments_table_name.id = ?
+            WHERE u.id = ?
+            AND r.id = ?
             GROUP BY r.id"
         );
         $stmt->bind_param("ii", $user['id'], $id);
@@ -112,9 +115,11 @@ function handleGetRequest($conn) {
             r.is_income,
             r.start_date,
             r.last_payment_date,
-            r.description
+            r.description,
+            c.symbol AS currency
             FROM $regular_payments_table_name r
             JOIN $accounts_table_name a ON r.account_id = a.id
+            JOIN $currencies_table_name c ON a.currency_id = c.id
             JOIN $users_table_name u ON u.id = a.user_id
             WHERE u.id = ?
             AND a.id = ?
@@ -165,9 +170,11 @@ function handleGetRequest($conn) {
             r.frequency_id,
             r.start_date,
             r.last_payment_date,
-            r.description
+            r.description,
+            c.symbol AS currency
             FROM $regular_payments_table_name r
-            JOIN $accounts_table_name a ON r.account_id = a.id 
+            JOIN $accounts_table_name a ON r.account_id = a.id
+            JOIN $currencies_table_name c ON a.currency_id = c.id
             WHERE user_id = ? 
             GROUP BY r.id"
         );
