@@ -313,9 +313,10 @@ function handlePutRequest($conn) {
     $categoryId = $data["category_id"] ?? null;
     $frequencyId = $data["frequency_id"] ?? null;
     $amount = $data["amount"] ?? null;
+    $next_payment_date = $data["next_payment_date"] ?? null;
     $description = $data["description"] ?? null;
 
-    $hasEmptyData = hasEmptyData([$id, $categoryId, $frequencyId, $amount]);
+    $hasEmptyData = hasEmptyData([$id, $categoryId, $frequencyId, $amount, $next_payment_date]);
 
     if ($hasEmptyData) {
         sendJsonResponse(400, ["message"=> "All fields are required"]);
@@ -330,6 +331,7 @@ function handlePutRequest($conn) {
         sendJsonResponse(404, ["message" => 'Regular payment not found']);
         return;
     }
+    $regular_payment = $result->fetch_assoc();
 
     $stmt = $conn->prepare(
         "SELECT a.user_id FROM
@@ -360,6 +362,7 @@ function handlePutRequest($conn) {
         sendJsonResponse(400, ["message"=> "Invalid category"]);
         return;
     }
+    $category_type = $result->fetch_assoc()['is_income'];
 
     $stmt = $conn->prepare(
         "SELECT * FROM $frequencies_table_name
@@ -373,34 +376,51 @@ function handlePutRequest($conn) {
         sendJsonResponse(400, ["message"=> "Invalid frequency"]);
         return;
     }
+    $frequency = $result->fetch_assoc()['sql_interval'];
     
-    // $date1 = new DateTime("now");
-    // $format = 'Y-m-d H:i:s';
-    // $date2 = DateTime::createFromFormat($format, $paymentDate);
-    // if ($date2 === false || $date2->format($format) !== $paymentDate) {
-    //     sendJsonResponse(400, ["message" => "Invalid date format"]);
-    //     return;
-    // }
+    $date1 = new DateTime("now");
+    $format = 'Y-m-d H:i:s';
+    $date2 = DateTime::createFromFormat($format, $next_payment_date);
+    if ($date2 === false || $date2->format($format) !== $next_payment_date) {
+        sendJsonResponse(400, ["message" => "Invalid date format"]);
+        return;
+    }
     
-    // $date_diff = date_diff($date1, $date2, true);
-    // if ($date1 > $date2 && $date_diff->y >= 1) {
-    //     sendJsonResponse(400, ["message"=> "Invalid date - date is too ancient"]);
-    //     return;
-    // }
-    // if ($date1 < $date2) {
-    //     sendJsonResponse(400, ["message"=> "Invalid date - date is in the future"]);
-    //     return;
-    // }
+    $date_diff = date_diff($date1, $date2, true);
+    if ($date1 > $date2 && $date_diff->y >= 1) {
+        sendJsonResponse(400, ["message"=> "Invalid date - date is too ancient"]);
+        return;
+    }
 
+    $result = $conn->query(
+        "SELECT
+        DATE_ADD('$next_payment_date', INTERVAL -1 $frequency)
+        AS new_date"
+    );
+    $last_payment_date = $result->fetch_assoc()['new_date'];
+    
     $stmt = $conn->prepare(
         "UPDATE $regular_payments_table_name 
-        SET category_id = ?, frequency_id = ? amount = ?, description = ?
-        WHERE id = ?");
-    $stmt->bind_param("iiisi", $categoryId, $frequencyId, $amount, $description, $id);
+        SET category_id = ?, frequency_id = ?,
+            amount = ?, is_income = ?,
+            last_payment_date = ?, start_date = ?,
+            description = ?
+        WHERE id = ?"
+    );
+    $stmt->bind_param(
+        "iiiisssi",
+        $categoryId, $frequencyId,
+        $amount, $category_type,
+        $last_payment_date, $last_payment_date,
+        $description,
+        $id
+    );
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
-        sendJsonResponse(200, ["message" => 'Transaction updated successfully']);
+        sendJsonResponse(200, ["message" => 'Regular payment updated successfully']);
+    } elseif ($stmt->affected_rows === 0) {
+        sendJsonResponse(204, []);
     } else {
         sendJsonResponse(400, ["message" => 'Query execution failed: ' . $conn->error]);
     }
