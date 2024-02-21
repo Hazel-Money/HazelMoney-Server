@@ -29,14 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 $conn->close();
 
-function handleGetRequest($conn, $user_id) {
+function handleGetRequest($conn) {
     global $categories_table_name;
     global $users_table_name;
+    global $user;
     if (isset($_GET['id'])) {
         $id = $_GET['id'];
 
         $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE id = ? AND user_id = ?");
-        $stmt->bind_param("ii", $id, $user_id);
+        $stmt->bind_param("ii", $id, $user['id']);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -48,7 +49,7 @@ function handleGetRequest($conn, $user_id) {
         }
         $stmt->close();
     } elseif (isset($_GET['user_id']) && isset($_GET['is_income'])){
-        if ($user_id != $_GET['user_id']) {
+        if ($user['id'] != $_GET['user_id']) {
             sendJsonResponse(403, ['message'=> 'You are not allowed to access this content!!🤬']);
             return;
         }
@@ -58,7 +59,7 @@ function handleGetRequest($conn, $user_id) {
             return;
         }
         $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE (user_id = ? OR user_id = 1) AND is_income = ?");
-        $stmt->bind_param("ii", $user_id, $isIncome);
+        $stmt->bind_param("ii", $user['id'], $isIncome);
         $stmt->execute();
         $result = $stmt->get_result();
         $categories = [];
@@ -68,12 +69,12 @@ function handleGetRequest($conn, $user_id) {
         }
         sendJsonResponse(200, $categories);
     } else if (isset($_GET['user_id'])) {
-        if ($user_id != $_GET['user_id']) {
+        if ($user['id'] != $_GET['user_id']) {
             sendJsonResponse(403, ['message'=> 'You are not allowed to access this content!!🤬']);
             return;
         }
         $stmt = $conn->prepare("SELECT * FROM $categories_table_name WHERE user_id = ? OR user_id = 1");
-        $stmt->bind_param("i", $user_id);
+        $stmt->bind_param("i", $user['id']);
         $stmt->execute();
         $result = $stmt->get_result();
         $categories = [];
@@ -83,7 +84,7 @@ function handleGetRequest($conn, $user_id) {
         }
         sendJsonResponse(200, $categories);
     } else {
-        if ($user_id != 1) {
+        if ($user['id'] != 1) {
             sendJsonResponse(403, ["message"=> "You are not allowed to access this content"]);
             return;
         }
@@ -96,9 +97,11 @@ function handleGetRequest($conn, $user_id) {
     }
 }
 
-function handlePostRequest($conn, $user_id) {
+function handlePostRequest($conn) {
     global $categories_table_name;
     global $users_table_name;
+    global $env;
+    global $user;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $userId = isset($data['user_id']) ? intval($data['user_id']) : null;
@@ -114,9 +117,24 @@ function handlePostRequest($conn, $user_id) {
         return;
     }
 
-    if ($userId != $user_id) {
+    if ($userId != $user['id']) {
         sendJsonResponse(403, ["message"=> "You are not permitted to access this content! 🥰"]);
         return;
+    }
+
+    $result = $conn->query(
+        "SELECT name
+        FROM $categories_table_name
+        WHERE user_id = $user[id]
+        OR user_id = $env[admin_id]"
+    );
+    $user_categories = [];
+    while($category = $result->fetch_assoc()) {
+        $user_categories[] = $category['name'];
+    }
+
+    if (in_array($name, $user_categories)) {
+        sendJsonResponse(400, ["message" => "Category '$name' already exists"]);
     }
 
     $stmt = $conn->prepare(
