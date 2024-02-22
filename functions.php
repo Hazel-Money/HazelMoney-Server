@@ -89,3 +89,7 @@ function hasEmptyData(array $data) {
     }
     return false;
 }
+
+function currencyFormat($num) {
+    return number_format($num / 100, 2, '.', ',');
+}
