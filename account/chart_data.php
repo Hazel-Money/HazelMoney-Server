@@ -119,8 +119,8 @@ function handleGetRequest($conn) {
     foreach ($dates as $date) {
         $data[] = [     
             "date" => $date['date'],
-            "income" => $currency . currencyFormat($date['income']),
-            "expense" => $currency . currencyFormat($date['expense'])
+            "income" => $date['income'],
+            "expense" => $date['expense']
         ];
     }
     sendJsonResponse(200, $data);

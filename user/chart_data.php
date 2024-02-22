@@ -101,8 +101,8 @@ function handleGetRequest($conn) {
     while ($date = $result->fetch_assoc()) {
         $data[] = [     
             "date" => $date['date'],
-            "income" => $currency . currencyFormat($date['income']),
-            "expense" => $currency . currencyFormat($date['expense'])
+            "income" => $date['income'],
+            "expense" => $date['expense']
         ];
     }
     sendJsonResponse(200, $data);
