@@ -430,6 +430,14 @@ function handlePutRequest($conn) {
     $stmt->bind_param("iissi", $categoryId, $amount, $paymentDate, $description, $id);
     $stmt->execute();
 
+    $multiplication = $transaction['is_income'] === 1 ? 1 : -1;
+    $balance_difference = ($amount - $transaction['amount']) * $multiplication;
+    $query = "UPDATE $accounts_table_name
+        SET balance = balance + $balance_difference
+        WHERE id = $transaction[account_id]
+    ";
+    $conn->query($query);
+
     if ($stmt->affected_rows > 0) {
         sendJsonResponse(200, ["message" => 'Transaction updated successfully']);
     } elseif ($stmt->affected_rows === 0) {
