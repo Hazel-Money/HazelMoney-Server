@@ -19,9 +19,9 @@ $user = authorizeUser();
 $isAdmin = $user['id'] == $env['admin_id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    handleGetRequest($conn, $user['id']);
+    handleGetRequest($conn);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    handlePostRequest($conn, $user['id']);
+    handlePostRequest($conn);
 } elseif (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
     sendJsonResponse(405, ["message" => "$_SERVER[REQUEST_METHOD] requests are not allowed"]);
 } else {
