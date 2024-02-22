@@ -1,6 +1,6 @@
 <?php
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: *");
+header("Access-Control-Allow-Headers: Authorization");
 $allowedMethods = ['PUT', 'OPTIONS, GET'];
 header("Access-Control-Allow-Methods: GET, PUT, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");

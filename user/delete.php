@@ -1,6 +1,6 @@
 <?php
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: *");
+header("Access-Control-Allow-Headers: Authorization");
 $allowedMethods = ['DELETE', 'OPTIONS'];
 header("Access-Control-Allow-Methods: DELETE, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");

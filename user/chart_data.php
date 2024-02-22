@@ -1,6 +1,6 @@
 <?php
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: *");
+header("Access-Control-Allow-Headers: Authro");
 $allowedMethods = ['GET', 'OPTIONS'];
 header("Access-Control-Allow-Methods: GET, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
@@ -88,12 +88,11 @@ function handleGetRequest($conn) {
             ) AS c
         ) date_seq
         LEFT JOIN transactions t ON date_seq.date = DATE(t.payment_date)
-        JOIN users u ON u.id = $user[id]
         JOIN accounts a ON u.id = a.user_id
         LEFT JOIN currencies account_currencies ON a.currency_id = account_currencies.id
         LEFT JOIN currencies user_currencies ON u.default_currency_id = user_currencies.id
         WHERE date_seq.date >= '$date1' AND date_seq.date <= '$date2'
-        AND u.id = $user[id]
+        AND a.user_id = $user[id]
         GROUP BY date_seq.date
         ORDER BY date_seq.date;"
     );
