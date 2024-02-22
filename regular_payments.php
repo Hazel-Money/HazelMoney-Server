@@ -243,6 +243,11 @@ function handlePostRequest($conn) {
         sendJsonResponse(400, ["message" => "Invalid amount"]);
         return;
     }
+
+    if ($amount > 100000000) {
+        sendJsonResponse(400, ["message" => "Amount is too big (1 million max)"]);
+    }
+
     if (($isIncome != 0 && $isIncome != 1) || !is_numeric($isIncome)) {
         sendJsonResponse(400, ["message" => "Invalid transaction type"]);
         return;
@@ -378,6 +383,15 @@ function handlePutRequest($conn) {
     }
     $frequency = $result->fetch_assoc()['sql_interval'];
     
+    if ($amount <= 0 || !is_numeric($amount)) {
+        sendJsonResponse(400, ["message" => "Invalid amount"]);
+        return;
+    }
+
+    if ($amount > 100000000) {
+        sendJsonResponse(400, ["message" => "Amount is too big (1 million max)"]);
+    }
+
     $date1 = new DateTime("now");
     $format = 'Y-m-d H:i:s';
     $date2 = DateTime::createFromFormat($format, $next_payment_date);

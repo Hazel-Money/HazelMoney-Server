@@ -251,6 +251,11 @@ function handlePostRequest($conn) {
         sendJsonResponse(400, ["message" => "Invalid amount"]);
         return;
     }
+
+    if ($amount > 100000000) {
+        sendJsonResponse(400, ["message" => "Amount is too big (1 million max)"]);
+    }
+
     if (($isIncome != 0 && $isIncome != 1) || !is_numeric($isIncome)) {
         sendJsonResponse(400, ["message" => "Invalid transaction type"]);
         return;
@@ -406,6 +411,15 @@ function handlePutRequest($conn) {
     $category = $result->fetch_assoc();
     if ($category['is_income'] !== $transaction['is_income']) {
         sendJsonResponse(400, ["message"=> "Category and transaction type conflict"]);
+    }
+
+    if ($amount <= 0 || !is_numeric($amount)) {
+        sendJsonResponse(400, ["message" => "Invalid amount"]);
+        return;
+    }
+
+    if ($amount > 100000000) {
+        sendJsonResponse(400, ["message" => "Amount is too big (1 million max)"]);
     }
 
     $date1 = new DateTime("now");
