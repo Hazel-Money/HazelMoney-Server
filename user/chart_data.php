@@ -87,12 +87,20 @@ function handleGetRequest($conn) {
                 SELECT 0 AS a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9
             ) AS c
         ) date_seq
-        LEFT JOIN transactions t ON date_seq.date = DATE(t.payment_date)
-        JOIN accounts a ON u.id = a.user_id
+        LEFT JOIN (
+            SELECT 
+                DATE(t.payment_date) AS date,
+                t.amount,
+                t.is_income,
+                a.user_id
+            FROM transactions t
+            INNER JOIN accounts a ON t.account_id = a.id
+        ) t ON date_seq.date = t.date AND t.user_id = $user[id]
+        LEFT JOIN users u ON u.id = t.user_id
+        LEFT JOIN accounts a ON u.id = a.user_id
         LEFT JOIN currencies account_currencies ON a.currency_id = account_currencies.id
         LEFT JOIN currencies user_currencies ON u.default_currency_id = user_currencies.id
         WHERE date_seq.date >= '$date1' AND date_seq.date <= '$date2'
-        AND a.user_id = $user[id]
         GROUP BY date_seq.date
         ORDER BY date_seq.date;"
     );
