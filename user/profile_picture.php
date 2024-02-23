@@ -3,7 +3,6 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Authorization, Content-Type");
 $allowedMethods = ['GET', 'OPTIONS'];
 header("Access-Control-Allow-Methods: GET, OPTIONS, POST");
-header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Max-Age: 3600");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -34,7 +33,6 @@ function handleGetRequest($conn) {
     global $env;
     global $users_table_name;
     
-
     $result = $conn->query(
         "SELECT profile_picture_path
         FROM $users_table_name u
@@ -46,11 +44,13 @@ function handleGetRequest($conn) {
     if (!file_exists($target_file_path)) {
         createDirectoryIfNotExists($target_directory);
         $target_file_path = $target_directory . $env["default_pfp_name"];
-        $conn->query(
+        $stmt = $conn->prepare(
             "UPDATE $users_table_name u
-            SET u.profile_picture_path = $env[default_pfp_name]
-            WHERE u.id = $user[id]"
+            SET u.profile_picture_path = ?
+            WHERE u.id = ?"
         );
+        $stmt->bind_param("si", $env["default_pfp_name"], $user['id']);
+        $stmt->execute();
         $image_data = file_get_contents($env["default_pfp_url"]);
         if ($image_data === false) {
             sendJsonResponse(500, ["message" => "Failed to fetch default profile picture image"]);
