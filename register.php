@@ -23,6 +23,7 @@ $conn->close();
 function handlePostRequest($conn) {
     global $env;
     global $users_table_name;
+    global $accounts_table_name;
     $data = json_decode(file_get_contents("php://input"), true);
 
     $email = $data['email'] ?? null;
@@ -69,6 +70,24 @@ function handlePostRequest($conn) {
 
     $stmt = $conn->prepare("INSERT INTO $users_table_name (email, username, password_hash, default_currency_id, profile_picture_path) VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param("sssis", $email, $name, $password, $default_currency_id, $profile_picture_name);
+    $stmt->execute();
+
+    $stmt = $conn->prepare(
+        "SELECT id
+        FROM $users_table_name
+        WHERE email = ?"
+    );
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user_id = $result->fetch_assoc()['id'];
+
+    $stmt = $conn->prepare(
+        "INSERT INTO $accounts_table_name 
+        (user_id, name, currency_id, balance)
+        VALUES ( ?, ?, ?, '0')"
+    );
+    $stmt->bind_param("sss", $user_id, $name, $default_currency_id);
     $stmt->execute();
 
     if ($stmt->affected_rows < 1) {
