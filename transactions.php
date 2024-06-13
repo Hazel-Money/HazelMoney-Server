@@ -261,7 +261,7 @@ function handlePostRequest($conn) {
         return;
     }
 
-    $date1 = new DateTime("now");
+    $date1 = new DateTime("now", new DateTimeZone("UTC+1"));
     $format = 'Y-m-d H:i:s';
     $date2 = DateTime::createFromFormat($format, $paymentDate);
     if ($date2 === false || $date2->format($format) !== $paymentDate) {
@@ -275,7 +275,7 @@ function handlePostRequest($conn) {
         return;
     }
     if ($date1 < $date2) {
-        sendJsonResponse(400, ["message"=> "Invalid date - date is in the future"]);
+        sendJsonResponse(400, ["message"=> "Invalid date - date is too far in the furute"]);
         return;
     }
 
