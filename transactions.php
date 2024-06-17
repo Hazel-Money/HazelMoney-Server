@@ -239,6 +239,7 @@ function handlePostRequest($conn) {
     $isIncome = $data["is_income"] ?? null;
     $paymentDate = $data["payment_date"] ?? null;
     $description = $data["description"] ?? null;
+    $useCurrentTime = $data["useCurrentTime"] ?? null;
 
     $hasEmptyData = hasEmptyData([$accountId, $categoryId, $amount, $isIncome, $paymentDate]);
 
@@ -260,23 +261,30 @@ function handlePostRequest($conn) {
         sendJsonResponse(400, ["message" => "Invalid transaction type"]);
         return;
     }
-
-    $date1 = new DateTime("now", new DateTimeZone("UTC+1"));
-    $format = 'Y-m-d H:i:s';
-    $date2 = DateTime::createFromFormat($format, $paymentDate);
-    if ($date2 === false || $date2->format($format) !== $paymentDate) {
-        sendJsonResponse(400, ["message" => "Invalid date format"]);
-        return;
-    }
     
-    $date_diff = date_diff($date1, $date2, true);
-    if ($date1 > $date2 && $date_diff->y >= 1) {
-        sendJsonResponse(400, ["message"=> "Invalid date - date is too ancient"]);
-        return;
-    }
-    if ($date1 < $date2) {
-        sendJsonResponse(400, ["message"=> "Invalid date - date is too far in the furute"]);
-        return;
+    $format = 'Y-m-d H:i:s';
+    if ($useCurrentTime) {
+        $paymentDate = new DateTime();
+        $paymentDate->modify("+ 1hour");
+        $paymentDate = $paymentDate->format($format);
+    } else {
+        $date1 = new DateTime();
+        $date1->modify("+ 1hour");
+        $date2 = DateTime::createFromFormat($format, $paymentDate);
+        if ($date2 === false || $date2->format($format) !== $paymentDate) {
+            sendJsonResponse(400, ["message" => "Invalid date format"]);
+            return;
+        }
+        
+        $date_diff = date_diff($date1, $date2, true);
+        if ($date1 > $date2 && $date_diff->y >= 1) {
+            sendJsonResponse(400, ["message"=> "Invalid date - date is too ancient"]);
+            return;
+        }
+        if ($date1 < $date2) {
+            sendJsonResponse(400, ["message"=> "Invalid date - date is too far in the furute"]);
+            return;
+        }
     }
 
     $stmt = $conn->prepare(
